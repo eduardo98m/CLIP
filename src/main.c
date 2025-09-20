@@ -3,12 +3,16 @@
 #include <string.h>
 
 
+// Helper for converting int → string
+
 CLIP_DEFINE_LIST_TYPE(int)
 
-// Helper for converting int → string
 void int_to_str(int x, char *buf, size_t n) { 
   snprintf(buf, n, "%d", x); 
 }
+
+CLIP_REGISTER_LIST_PRINT(int, int_to_str)
+
 int compare_ints_ascending(const int *a, const int *b) {
     return (*a > *b) - (*a < *b);
 }
@@ -23,10 +27,11 @@ typedef struct {
 } Student;
 
 void Student_to_str(Student x, char *buf, size_t n) {
-  snprintf(buf, n, "{%s - %d}", x.name, x.age);
+  snprintf(buf, n, "\n{%s - %d}", x.name, x.age);
 }
 
 CLIP_DEFINE_LIST_TYPE(Student)
+CLIP_REGISTER_LIST_PRINT(Student, Student_to_str)
 
 int main() {
   // Lets create our group of Student
@@ -38,7 +43,7 @@ int main() {
   List_append(Student,&classroom, Carlos);
   List_append(Student,&classroom, Maria);
   List_append(Student,&classroom, Marcos);
-  char *students = List_to_str(Student, &classroom, Student_to_str);
+  char *students = List_to_str(Student, &classroom);
 
   printf("List of students :  %s \n", students);
   free(students);
@@ -50,7 +55,7 @@ int main() {
   List_append(int, &prices, 2);
   List_replace(int, &prices, 1, 5);
 
-  char *s = List_to_str(int, &prices, int_to_str);
+  char *s = List_to_str(int, &prices);
   printf("List contents: %s\n", s);
   free(s);
   List_free(int, &prices);
@@ -67,7 +72,7 @@ int main() {
   List_append(int, &numbers, -5); // Add a duplicate
 
   // Print the list before sorting
-  char *before_str = List_to_str(int, &numbers, int_to_str);
+  char *before_str = List_to_str(int, &numbers);
   printf("Before sorting: %s\n", before_str);
   free(before_str);
 
@@ -75,13 +80,13 @@ int main() {
   List_sort(int, &numbers, compare_ints_ascending);
 
   // Print the list after sorting
-  char *after_str_asc = List_to_str(int, &numbers, int_to_str);
+  char *after_str_asc = List_to_str(int, &numbers);
   printf("After ascending sort:  %s\n", after_str_asc);
   free(after_str_asc);
 
   // Sort again, this time descending
   List_sort(int, &numbers, compare_ints_descending);
-  char* after_str_desc = List_to_str(int, &numbers, int_to_str);
+  char* after_str_desc = List_to_str(int, &numbers);
   printf("After descending sort: %s\n", after_str_desc);
   free(after_str_desc);
 
@@ -95,9 +100,8 @@ int main() {
   };
   List(Student) group1 = List_init_from_static_array(Student, raw_students);
 
-  char *group1_str = List_to_str(Student, &group1, Student_to_str);
-  printf("Group1 from static array: %s\n", group1_str);
-  free(group1_str);
+  printf("Group1 from static array:\n");
+  List_println(Student, &group1);
 
   // === Another Student list ===
   Student more_students[] = {
@@ -106,16 +110,15 @@ int main() {
   };
   List(Student) group2 = List_init_from_static_array(Student, more_students);
 
-  char *group2_str = List_to_str(Student, &group2, Student_to_str);
+  char *group2_str = List_to_str(Student, &group2);
   printf("Group2 from static array: %s\n", group2_str);
   free(group2_str);
 
   // === Merge Student lists ===
   List_merge(Student, &group1, &group2);
 
-  printf("Merged groups : ");
-  List_print(Student, &group1, Student_to_str);
-  printf("\n");
+  printf("Merged groups : \n ");
+  List_println(Student, &group1);
   
 
   // Cleanup

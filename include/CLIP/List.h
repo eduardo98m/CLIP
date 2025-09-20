@@ -1,33 +1,33 @@
-
 /*
  * @author Eduardo I. Lopez H. - eduardo98m@gmail.com
- * @brief In this file we define a macro that generates a type-safe list
+ * @brief In this file we define a series of macros that generates a **type-safe** list
  * (dynamic array) for any given element type in C.
  *
  * Example:
- *   CLIP_DEFINE_LIST_TYPE(int, Int)
+ * // Assuming no second argument is used for default behavior
+ * CLIP_DEFINE_LIST_TYPE(int) 
  *
- *   List(Int) xs = List_init(Int, 4);
- *   List_append(Int, &xs, 42);
- *   List_free(Int, &xs);
+ * List(int) xs = List_init(int, 4);
+ * List_append(int, &xs, 42);
+ * List_free(int, &xs);
  *
  * The following methods are generated automatically:
- *   - init
- *   - init_from_array
- *   - ensure_capacity
- *   - append
- *   - replace
- *   - get
- *   - remove_at
- *   - clear
- *   - reserve
- *   - shrink_to_fit
- *   - to_str
- *   - sort
- *   - merge
- *   - free
+ * - init
+ * - init_from_array
+ * - ensure_capacity
+ * - append
+ * - replace
+ * - get
+ * - remove_at
+ * - clear
+ * - reserve
+ * - shrink_to_fit
+ * - to_str (requires registration via CLIP_REGISTER_LIST_PRINT)
+ * - to_str_custom (takes a user-supplied function)
+ * - sort
+ * - merge
+ * - free
  */
-
 #ifndef CLIP_LIST_H
 #define CLIP_LIST_H
 
@@ -40,46 +40,46 @@
  * @brief Define a type-safe dynamic list for the given element type.
  *
  * This macro generates:
- *   - A typedef `List_<Type>` structure containing `data`, `size`, `capacity`.
- *   - A set of inline functions specialized for `<Type>`:
- *       
- *       - `init_list_<Type>`
- * 
- *       - `init_list_from_array_<Type>`
- * 
- *       - `list_ensure_capacity_<Type>`
- * 
- *       - `list_append_<Type>`
- * 
- *       - `list_replace_<Type>`
- * 
- *       - `list_get_<Type>`
- * 
- *       - `list_remove_at_<Type>`
- * 
- *       - `list_clear_<Type>`
- * 
- *       - `list_reserve_<Type>`
- * 
- *       - `list_shrink_to_fit_<Type>`
- * 
- *       - `list_to_str_<Type>`
- * 
- *       - `list_sort_<Type>`
- * 
- *       - `list_merge_<Type>`
- * 
- *       - `free_list_<Type>`
+ * - A typedef `List_<Type>` structure containing `data`, `size`, and `capacity`.
+ * - A set of **static inline functions** specialized for `<Type>`:
+ *
+ * - `init_list_<Type>`
+ *
+ * - `init_list_from_array_<Type>`
+ *
+ * - `list_ensure_capacity_<Type>`
+ *
+ * - `list_append_<Type>`
+ *
+ * - `list_replace_<Type>`
+ *
+ * - `list_get_<Type>`
+ *
+ * - `list_remove_at_<Type>`
+ *
+ * - `list_clear_<Type>`
+ *
+ * - `list_reserve_<Type>`
+ *
+ * - `list_shrink_to_fit_<Type>`
+ *
+ * - `list_to_str_<Type>_custom`
+ *
+ * - `list_sort_<Type>`
+ *
+ * - `list_merge_<Type>`
+ *
+ * - `free_list_<Type>`
  *
  * @param Type The element type (e.g., `int`, `float`, `struct Foo`).
- * @param BUF_SIZE Optional: buffer size per element for list_to_str. Default is 256.
+ * @param BUF_SIZE Optional: Buffer size allocated per element for string conversion (used by `list_to_str_..._custom`). Default is 256.
  *
  * @note Each instantiation of this macro generates a new independent
- *       list type and associated functions.
+ * list type and associated functions, all scoped within the including file.
  *
  * @note Usage examples:
- *   CLIP_DEFINE_LIST_TYPE(int)             // default BUF_SIZE = 256
- *   CLIP_DEFINE_LIST_TYPE(Student, 512)   // custom BUF_SIZE = 512
+ * CLIP_DEFINE_LIST_TYPE(int)             // default BUF_SIZE = 256
+ * CLIP_DEFINE_LIST_TYPE(Student, 512)   // custom BUF_SIZE = 512
  */
 #define CLIP_DEFINE_LIST_TYPE(...) \
   CLIP_DEFINE_LIST_TYPE_IMPL(__VA_ARGS__, 256)
@@ -207,7 +207,7 @@
     return true;                                                              \
   }                                                                           \
                                                                               \
-  static inline char *list_to_str_##Type(                                     \
+  static inline char *list_to_str_##Type##_custom(                            \
       List_##Type *list, void (*elem_to_str)(Type, char *, size_t))           \
   {                                                                           \
     if (!list)                                                                \
@@ -261,6 +261,44 @@
     list->data = NULL;                                                        \
     list->size = 0;                                                           \
     list->capacity = 0;                                                       \
+  }
+
+/**
+ * @brief Registers the default print function for a specific list type.
+ *
+ * This macro **defines** the `list_to_str_<Type>_main` function, which is used
+ * by convenience macros like `List_to_str` and `List_print`.
+ *
+ * @param Type The element type for which to register the print function.
+ * @param print_fn The function with signature: `void func(Type, char*, size_t)`.
+ *
+ * @note IMPORTANT: Due to C macro limitations, this macro **must be called exactly once**
+ * for a given type in a single translation unit (e.g., a `.c` file). Calling it
+ * more than once will result in a compiler error due to redefinition.
+ *
+ * Example:
+ * ```c
+ * void int_to_str(int value, char *buffer, size_t size) {
+ * snprintf(buffer, size, "%d", value);
+ * }
+ *
+ * CLIP_DEFINE_LIST_TYPE(int);
+ * CLIP_REGISTER_LIST_PRINT(int, int_to_str);
+ *
+ * List(int) xs = List_init(int, 4);
+ * List_append(int, &xs, 42);
+ * List_print(int, &xs);  // Uses registered function!
+ * ```
+ */
+#define CLIP_REGISTER_LIST_PRINT(Type, print_fn)                             \
+  static inline char *list_to_str_##Type##_main(List_##Type *list)           \
+  {                                                                          \
+    if (!print_fn)                                                           \
+    {                                                                        \
+      fprintf(stderr, "No print function registered for type " #Type "!\n"); \
+      return NULL;                                                           \
+    }                                                                        \
+    return list_to_str_##Type##_custom(list, print_fn);                      \
   }
 
 /**
@@ -368,11 +406,20 @@
 #define List_shrink_to_fit(Type, list) list_shrink_to_fit_##Type(list)
 
 /**
- * @def List_to_str(Type, list, fn)
+ * @def List_to_str(Type, list)
+ * @brief Convert list contents to a string using the registered
+ * print function for this type. The returned string must be freed by the caller.
+ *
+ * @note You must call `CLIP_REGISTER_LIST_PRINT(Type, fn)` for this type first.
+ */
+#define List_to_str(Type, list) list_to_str_##Type##_main(list)
+
+/**
+ * @def List_to_str_custom(Type, list, fn)
  * @brief Convert list contents to a string using a user-supplied
  *        element-to-string function.
  */
-#define List_to_str(Type, list, fn) list_to_str_##Type(list, fn)
+#define List_to_str_custom(Type, list, fn) list_to_str_##Type##_custom(list, fn)
 
 /**
  * @def List_sort(Type, list, cmp)
@@ -408,24 +455,75 @@
 #define List_free(Type, list) free_list_##Type(list)
 
 /**
- * @def List_print(Type, list, fn)
- * @brief Pretty-print a list directly to stdout using the given
- * element-to-string function. (Does not prints the end-line character)
+ * @def List_print(Type, list)
+ * @brief Pretty-print a list directly to stdout using the registered
+ * print function. (Does not print a trailing newline)
+ *
+ * @note You must call `CLIP_REGISTER_LIST_PRINT(Type, fn)` for this type first.
  *
  * Example:
  * ```c
- * List_print(Student, &classroom, Student_to_str);
+ * CLIP_REGISTER_LIST_PRINT(int, int_to_str);
+ * List_print(int, &my_list);
  * ```
  */
-#define List_print(Type, list, fn)                \
-  do                                              \
-  {                                               \
-    char *_tmp_str = List_to_str(Type, list, fn); \
-    if (_tmp_str)                                 \
-    {                                             \
-      printf("%s", _tmp_str);                     \
-      free(_tmp_str);                             \
-    }                                             \
+#define List_print(Type, list)                \
+  do                                          \
+  {                                           \
+    char *_tmp_str = List_to_str(Type, list); \
+    if (_tmp_str)                             \
+    {                                         \
+      printf("%s", _tmp_str);                 \
+      free(_tmp_str);                         \
+    }                                         \
+  } while (0)
+
+/**
+ * @def List_print_custom(Type, list, fn)
+ * @brief Pretty-print a list directly to stdout using the given
+ * element-to-string function. (Does not print the end-line character)
+ *
+ * Example:
+ * ```c
+ * List_print_custom(Student, &classroom, Student_to_str);
+ * ```
+ */
+#define List_print_custom(Type, list, fn)                \
+  do                                                     \
+  {                                                      \
+    char *_tmp_str = List_to_str_custom(Type, list, fn); \
+    if (_tmp_str)                                        \
+    {                                                    \
+      printf("%s", _tmp_str);                            \
+      free(_tmp_str);                                    \
+    }                                                    \
+  } while (0)
+
+/**
+ * @def List_println(Type, list)
+ * @brief Pretty-print a list directly to stdout using the registered
+ * print function, followed by a newline.
+ *
+ * @note You must call `CLIP_REGISTER_LIST_PRINT(Type, fn)` for this type first.
+ */
+#define List_println(Type, list) \
+  do                             \
+  {                              \
+    List_print(Type, list);      \
+    printf("\n");                \
+  } while (0)
+
+
+/**
+ * @def List_println_custom(Type, list, fn)
+ * @brief Pretty-print a list directly to stdout using a custom 
+ * print function, followed by a newline.
+ */
+#define List_println_custom(Type, list, fn) \
+  do                                        \
+  {                                         \
+    List_print_custom(Type, list, fn);      \
+    printf("\n");                           \
   } while (0)
 
 #endif /* CLIP_LIST_H */
