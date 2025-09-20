@@ -116,9 +116,10 @@ int main() {
   // === Merge Student lists ===
   List_merge(Student, &group1, &group2);
 
-  char *merged_str = List_to_str(Student, &group1, Student_to_str);
-  printf("Merged groups: %s\n", merged_str);
-  free(merged_str);
+  printf("Merged groups : ");
+  List_print(Student, &group1, Student_to_str);
+  printf("\n");
+  
 
   // Cleanup
   List_free(Student, &group1);

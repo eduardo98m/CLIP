@@ -43,7 +43,7 @@
  *   - A typedef `List_<Type>` structure containing `data`, `size`, `capacity`.
  *   - A set of inline functions specialized for `<Type>`:
  *       - init_list_<Type>
- *       - init_
+ *       - init_list_from_array_<Type>
  *       - list_ensure_capacity_<Type>
  *       - list_append_<Type>
  *       - list_replace_<Type>
@@ -58,11 +58,26 @@
  *       - free_list_<Type>
  *
  * @param Type The element type (e.g., `int`, `float`, `struct Foo`).
+ * @param BUF_SIZE Optional: buffer size per element for list_to_str. Default is 256.
  *
  * @note Each instantiation of this macro generates a new independent
  *       list type and associated functions.
+ *
+ * @note Usage examples:
+ *   CLIP_DEFINE_LIST_TYPE(int)             // default BUF_SIZE = 256
+ *   CLIP_DEFINE_LIST_TYPE(Student, 512)   // custom BUF_SIZE = 512
  */
-#define CLIP_DEFINE_LIST_TYPE(Type)                                           \
+#define CLIP_DEFINE_LIST_TYPE(...) \
+  CLIP_DEFINE_LIST_TYPE_IMPL(__VA_ARGS__, 256)
+
+/**
+ * @brief Specialized implementation of CLIP_DEFINE_LIST_TYPE but allows the
+ * user to specify a buffer size for each of the types.
+ *
+ * @param Type The type
+ * @param BUF_SIZE The buffer size
+ */
+#define CLIP_DEFINE_LIST_TYPE_IMPL(Type, BUF_SIZE, ...)                       \
   typedef struct                                                              \
   {                                                                           \
     Type *data;                                                               \
@@ -181,12 +196,14 @@
   static inline char *list_to_str_##Type(                                     \
       List_##Type *list, void (*elem_to_str)(Type, char *, size_t))           \
   {                                                                           \
-    size_t bufsize = list->size * 32 + 2; /* rough estimate */                \
+    if (!list)                                                                \
+      return NULL;                                                            \
+    size_t bufsize = list->size * BUF_SIZE + 2;                               \
     char *buffer = malloc(bufsize);                                           \
     if (!buffer)                                                              \
       return NULL;                                                            \
     strcpy(buffer, "[");                                                      \
-    char elem[64];                                                            \
+    char elem[BUF_SIZE];                                                      \
     for (int i = 0; i < list->size; i++)                                      \
     {                                                                         \
       elem_to_str(list->data[i], elem, sizeof(elem));                         \
@@ -197,7 +214,9 @@
     strcat(buffer, "]");                                                      \
     return buffer;                                                            \
   }                                                                           \
-  static inline bool list_sort_##Type(                                        \
+                                                                              \
+  static inline bool                                                          \
+  list_sort_##Type(                                                           \
       List_##Type *list, int (*comparator)(const Type *a, const Type *b))     \
   {                                                                           \
     if (!list || !list->data || !comparator)                                  \
@@ -272,14 +291,14 @@
  * @def List_init_from_static_array(Type, arr)
  * @brief Initialize a list from a compile-time array.
  *
- * This macro automatically infers the length of a static (stack-allocated) 
+ * This macro automatically infers the length of a static (stack-allocated)
  * array and calls the generated `init_list_from_array_<Type>` function.
  *
  * @param Type  The element type (e.g., `int`, `float`, `MyStruct`).
- * @param arr   A static array (not a pointer). The macro uses 
+ * @param arr   A static array (not a pointer). The macro uses
  *              `sizeof(arr) / sizeof(arr[0])` to compute the element count.
  *
- * @note This will raise a compiler error if `arr` is a pointer, 
+ * @note This will raise a compiler error if `arr` is a pointer,
  *       since the size cannot be determined automatically.
  *
  * Example:
@@ -289,7 +308,7 @@
  * ```
  */
 #define List_init_from_static_array(Type, arr) \
-    init_list_from_array_##Type((arr), (int)(sizeof(arr) / sizeof((arr)[0])))
+  init_list_from_array_##Type((arr), (int)(sizeof(arr) / sizeof((arr)[0])))
 
 /**
  * @def List_append(Type, list, val)
@@ -373,5 +392,26 @@
  * @brief Free all memory held by the list and reset its fields.
  */
 #define List_free(Type, list) free_list_##Type(list)
+
+/**
+ * @def List_print(Type, list, fn)
+ * @brief Pretty-print a list directly to stdout using the given
+ * element-to-string function. (Does not prints the end-line character)
+ *
+ * Example:
+ * ```c
+ * List_print(Student, &classroom, Student_to_str);
+ * ```
+ */
+#define List_print(Type, list, fn)                \
+  do                                              \
+  {                                               \
+    char *_tmp_str = List_to_str(Type, list, fn); \
+    if (_tmp_str)                                 \
+    {                                             \
+      printf("%s", _tmp_str);                     \
+      free(_tmp_str);                             \
+    }                                             \
+  } while (0)
 
 #endif /* CLIP_LIST_H */
