@@ -72,6 +72,10 @@ int main()
   List_append(int, &numbers, 101);
   List_append(int, &numbers, 0);
   List_append(int, &numbers, 23);
+
+  for (int i = 0; i < numbers.size; ++i){
+    printf("Getting Value: %d\n", List_get(int, &numbers, i));
+  }
   List_append(int, &numbers, -5); // Add a duplicate
 
   List_foreach(const int, elem, &numbers)

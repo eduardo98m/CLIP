@@ -18,6 +18,9 @@
  * - append
  * - replace
  * - get
+ * - get_ptr
+ * - at
+ * - at_ptr
  * - remove_at
  * - clear
  * - reserve
@@ -54,6 +57,12 @@
  * - `list_replace_<Type>`
  *
  * - `list_get_<Type>`
+ * 
+ * - `list_get_ptr_<Type>`
+ * 
+ * - `list_at_<Type>`
+ * 
+ * - `list_at_ptr_<Type>`
  *
  * - `list_remove_at_<Type>`
  *
@@ -162,13 +171,34 @@
     return true;                                                              \
   }                                                                           \
                                                                               \
-  static inline bool list_get_##Type(List_##Type *list, int index,            \
-                                     Type *out)                               \
+  static inline Type list_get_##Type(List_##Type *list, int index)            \
   {                                                                           \
     if (index < 0 || index >= list->size)                                     \
-      return false;                                                           \
-    *out = list->data[index];                                                 \
-    return true;                                                              \
+    {                                                                         \
+      fprintf(stderr, "List index out of bounds\n");                          \
+      return (Type){0};                                                       \
+    }                                                                         \
+    return list->data[index];                                                 \
+  }                                                                           \
+                                                                              \
+  static inline Type *list_get_ptr_##Type(List_##Type *list, int index)       \
+  {                                                                           \
+    if (index < 0 || index >= list->size)                                     \
+    {                                                                         \
+      fprintf(stderr, "List index out of bounds\n");                          \
+      return NULL;                                                            \
+    }                                                                         \
+    return &list->data[index];                                                \
+  }                                                                           \
+                                                                              \
+  static inline Type list_at_##Type(List_##Type *list, int index)             \
+  {                                                                           \
+    return list->data[index];                                                 \
+  }                                                                           \
+                                                                              \
+  static inline Type *list_at_ptr_##Type(List_##Type *list, int index)        \
+  {                                                                           \
+    return &list->data[index];                                                \
   }                                                                           \
                                                                               \
   static inline bool list_remove_at_##Type(List_##Type *list, int index)      \
@@ -375,11 +405,120 @@
 #define List_replace(Type, list, i, val) list_replace_##Type(list, i, val)
 
 /**
- * @def List_get(Type, list, i, out)
- * @brief Retrieve the element at index `i`.
- * @param out Pointer where the element will be written.
+ * @def List_get(Type, list, index)
+ * @brief Safely retrieve an element at the specified index with bounds checking.
+ * 
+ * This function performs bounds checking and will print an error message to stderr
+ * if the index is out of bounds, returning a zero-initialized value of the given type.
+ * 
+ * @param Type The element type (e.g., `int`, `float`, `struct MyStruct`).
+ * @param list Pointer to the List(Type) structure.
+ * @param index The zero-based index of the element to retrieve.
+ * @return The element at the specified index, or zero-initialized value if out of bounds.
+ * 
+ * @note This is the safe version. For performance-critical code where bounds are
+ *       guaranteed to be valid, consider using List_at() instead.
+ * 
+ * Example:
+ * ```c
+ * List(int) xs = List_init_from_array(int, (int[]){10, 20, 30}, 3);
+ * int value = List_get(int, &xs, 1);  // Returns 20
+ * int invalid = List_get(int, &xs, 5);  // Prints error, returns 0
+ * ```
  */
-#define List_get(Type, list, i, out) list_get_##Type(list, i, out)
+#define List_get(Type, list, index) list_get_##Type(list, index)
+
+/**
+ * @def List_get_ptr(Type, list, index)
+ * @brief Safely retrieve a pointer to an element at the specified index with bounds checking.
+ * 
+ * This function performs bounds checking and will print an error message to stderr
+ * if the index is out of bounds, returning NULL. The returned pointer can be used
+ * to read or modify the element in place.
+ * 
+ * @param Type The element type (e.g., `int`, `float`, `struct MyStruct`).
+ * @param list Pointer to the List(Type) structure.
+ * @param index The zero-based index of the element to retrieve.
+ * @return Pointer to the element at the specified index, or NULL if out of bounds.
+ * 
+ * @note Always check for NULL before dereferencing the returned pointer.
+ * 
+ * Example:
+ * ```c
+ * List(int) xs = List_init_from_array(int, (int[]){10, 20, 30}, 3);
+ * int* ptr = List_get_ptr(int, &xs, 1);
+ * if (ptr != NULL) {
+ *     printf("Value: %d\n", *ptr);  // Prints: Value: 20
+ *     *ptr = 99;  // Modify the element
+ * }
+ * ```
+ */
+#define List_get_ptr(Type, list, index) list_get_ptr_##Type(list, index)  
+
+/**
+ * @def List_at(Type, list, index)
+ * @brief Directly retrieve an element at the specified index without bounds checking.
+ * 
+ * This is the fast, unchecked version that directly accesses the underlying array.
+ * No bounds checking is performed, so accessing an invalid index results in 
+ * undefined behavior.
+ * 
+ * @param Type The element type (e.g., `int`, `float`, `struct MyStruct`).
+ * @param list Pointer to the List(Type) structure.
+ * @param index The zero-based index of the element to retrieve.
+ * @return The element at the specified index.
+ * 
+ * @warning This function does NOT perform bounds checking. Accessing an invalid
+ *          index may cause a segmentation fault or return garbage data.
+ *          Use List_get() for safer access with bounds checking.
+ * 
+ * @note This function can also be used for assignment: `List_at(int, &xs, 2) = 42;`
+ * 
+ * Example:
+ * ```c
+ * List(int) xs = List_init_from_array(int, (int[]){10, 20, 30}, 3);
+ * 
+ * // Fast read access (make sure index is valid!)
+ * if (xs.size > 1) {
+ *     int value = List_at(int, &xs, 1);  // Returns 20
+ * }
+ * 
+ * // Direct assignment
+ * if (xs.size > 2) {
+ *     List_at(int, &xs, 2) = 99;  // Set element to 99
+ * }
+ * ```
+ */
+#define List_at(Type, list, index) list_at_##Type(list, index)
+
+/**
+ * @def List_at_ptr(Type, list, index)
+ * @brief Directly retrieve a pointer to an element at the specified index without bounds checking.
+ * 
+ * This is the fast, unchecked version that directly accesses the underlying array
+ * and returns a pointer to the element. No bounds checking is performed.
+ * 
+ * @param Type The element type (e.g., `int`, `float`, `struct MyStruct`).
+ * @param list Pointer to the List(Type) structure.
+ * @param index The zero-based index of the element to retrieve.
+ * @return Pointer to the element at the specified index.
+ * 
+ * @warning This function does NOT perform bounds checking. Accessing an invalid
+ *          index may cause a segmentation fault. Use List_get_ptr() for safer
+ *          access with bounds checking.
+ * 
+ * Example:
+ * ```c
+ * List(int) xs = List_init_from_array(int, (int[]){10, 20, 30}, 3);
+ * 
+ * // Fast pointer access (make sure index is valid!)
+ * if (xs.size > 1) {
+ *     int* ptr = List_at_ptr(int, &xs, 1);
+ *     *ptr = 42;  // Modify the element
+ * }
+ * ```
+ */
+#define List_at_ptr(Type, list, index) list_at_ptr_##Type(list, index)
 
 /**
  * @def List_remove_at(Type, list, i)
@@ -543,7 +682,7 @@
  * @param var   The name of the variable (a **pointer to Type**) to hold the
  * current element.
  * @param list  Pointer to the List(Type) structure (e.g., `&my_list`).
- * 
+ *
  * @note The iterator stores the size at the start of the loop to avoid problems.
  */
 #define List_foreach(Type, var, list)                \
