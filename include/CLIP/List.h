@@ -42,20 +42,34 @@
  * This macro generates:
  *   - A typedef `List_<Type>` structure containing `data`, `size`, `capacity`.
  *   - A set of inline functions specialized for `<Type>`:
- *       - init_list_<Type>
- *       - init_list_from_array_<Type>
- *       - list_ensure_capacity_<Type>
- *       - list_append_<Type>
- *       - list_replace_<Type>
- *       - list_get_<Type>
- *       - list_remove_at_<Type>
- *       - list_clear_<Type>
- *       - list_reserve_<Type>
- *       - list_shrink_to_fit_<Type>
- *       - list_to_str_<Type>
- *       - list_sort_<Type>
- *       - list_merge_<Type>
- *       - free_list_<Type>
+ *       
+ *       - `init_list_<Type>`
+ * 
+ *       - `init_list_from_array_<Type>`
+ * 
+ *       - `list_ensure_capacity_<Type>`
+ * 
+ *       - `list_append_<Type>`
+ * 
+ *       - `list_replace_<Type>`
+ * 
+ *       - `list_get_<Type>`
+ * 
+ *       - `list_remove_at_<Type>`
+ * 
+ *       - `list_clear_<Type>`
+ * 
+ *       - `list_reserve_<Type>`
+ * 
+ *       - `list_shrink_to_fit_<Type>`
+ * 
+ *       - `list_to_str_<Type>`
+ * 
+ *       - `list_sort_<Type>`
+ * 
+ *       - `list_merge_<Type>`
+ * 
+ *       - `free_list_<Type>`
  *
  * @param Type The element type (e.g., `int`, `float`, `struct Foo`).
  * @param BUF_SIZE Optional: buffer size per element for list_to_str. Default is 256.
@@ -71,7 +85,7 @@
   CLIP_DEFINE_LIST_TYPE_IMPL(__VA_ARGS__, 256)
 
 /**
- * @brief Specialized implementation of CLIP_DEFINE_LIST_TYPE but allows the
+ * @brief Specialized implementation of `CLIP_DEFINE_LIST_TYPE` but allows the
  * user to specify a buffer size for each of the types.
  *
  * @param Type The type

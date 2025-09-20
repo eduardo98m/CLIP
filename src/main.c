@@ -9,8 +9,14 @@ CLIP_DEFINE_LIST_TYPE(int)
 void int_to_str(int x, char *buf, size_t n) { 
   snprintf(buf, n, "%d", x); 
 }
+int compare_ints_ascending(const int *a, const int *b) {
+    return (*a > *b) - (*a < *b);
+}
 
-// Example of using a custom struct
+int compare_ints_descending(const int *a, const int *b) {
+    return (*b > *a) - (*b < *a);
+}
+
 typedef struct {
   const char *name;
   int age;
@@ -20,29 +26,9 @@ void Student_to_str(Student x, char *buf, size_t n) {
   snprintf(buf, n, "{%s - %d}", x.name, x.age);
 }
 
-int compare_ints_ascending(const int *a, const int *b) {
-    // A common and concise way to write the comparison
-    return (*a > *b) - (*a < *b);
-}
-
-int compare_ints_descending(const int *a, const int *b) {
-    // Just swap the logic for descending order
-    return (*b > *a) - (*b < *a);
-}
-
 CLIP_DEFINE_LIST_TYPE(Student)
 
 int main() {
-  List(int) prices = List_init(int, 2);
-  List_append(int, &prices, 20);
-  List_append(int, &prices, 2);
-  List_replace(int, &prices, 1, 5);
-
-  char *s = List_to_str(int, &prices, int_to_str);
-  printf("List contents: %s\n", s);
-  free(s);
-  List_free(int, &prices);
-
   // Lets create our group of Student
 
   Student Carlos = {.name = "Carlos", .age = 12};
@@ -57,6 +43,17 @@ int main() {
   printf("List of students :  %s \n", students);
   free(students);
   List_free(Student, &classroom);
+
+
+  List(int) prices = List_init(int, 2);
+  List_append(int, &prices, 20);
+  List_append(int, &prices, 2);
+  List_replace(int, &prices, 1, 5);
+
+  char *s = List_to_str(int, &prices, int_to_str);
+  printf("List contents: %s\n", s);
+  free(s);
+  List_free(int, &prices);
 
 
   List(int) numbers = List_init(int, 8);
