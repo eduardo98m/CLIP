@@ -91,5 +91,38 @@ int main() {
   // Clean up
   List_free(int, &numbers);
 
+  Student raw_students[] = {
+      {.name = "Alice", .age = 18},
+      {.name = "Bob", .age = 19},
+      {.name = "Charlie", .age = 20}
+  };
+  List(Student) group1 = List_init_from_static_array(Student, raw_students);
+
+  char *group1_str = List_to_str(Student, &group1, Student_to_str);
+  printf("Group1 from static array: %s\n", group1_str);
+  free(group1_str);
+
+  // === Another Student list ===
+  Student more_students[] = {
+      {.name = "Diana", .age = 21},
+      {.name = "Eve",   .age = 22}
+  };
+  List(Student) group2 = List_init_from_static_array(Student, more_students);
+
+  char *group2_str = List_to_str(Student, &group2, Student_to_str);
+  printf("Group2 from static array: %s\n", group2_str);
+  free(group2_str);
+
+  // === Merge Student lists ===
+  List_merge(Student, &group1, &group2);
+
+  char *merged_str = List_to_str(Student, &group1, Student_to_str);
+  printf("Merged groups: %s\n", merged_str);
+  free(merged_str);
+
+  // Cleanup
+  List_free(Student, &group1);
+  List_free(Student, &group2);
+
   return 0;
 }

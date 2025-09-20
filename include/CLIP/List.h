@@ -13,6 +13,7 @@
  *
  * The following methods are generated automatically:
  *   - init
+ *   - init_from_array
  *   - ensure_capacity
  *   - append
  *   - replace
@@ -23,6 +24,7 @@
  *   - shrink_to_fit
  *   - to_str
  *   - sort
+ *   - merge
  *   - free
  */
 
@@ -41,6 +43,7 @@
  *   - A typedef `List_<Type>` structure containing `data`, `size`, `capacity`.
  *   - A set of inline functions specialized for `<Type>`:
  *       - init_list_<Type>
+ *       - init_
  *       - list_ensure_capacity_<Type>
  *       - list_append_<Type>
  *       - list_replace_<Type>
@@ -51,6 +54,7 @@
  *       - list_shrink_to_fit_<Type>
  *       - list_to_str_<Type>
  *       - list_sort_<Type>
+ *       - list_merge_<Type>
  *       - free_list_<Type>
  *
  * @param Type The element type (e.g., `int`, `float`, `struct Foo`).
@@ -77,6 +81,21 @@
     }                                                                         \
     list.size = 0;                                                            \
     list.capacity = capacity;                                                 \
+    return list;                                                              \
+  }                                                                           \
+  static inline List_##Type init_list_from_array_##Type(const Type *arr,      \
+                                                        int n)                \
+  {                                                                           \
+    List_##Type list;                                                         \
+    list.data = malloc(n * sizeof(Type));                                     \
+    if (!list.data && n > 0)                                                  \
+    {                                                                         \
+      fprintf(stderr, "Memory allocation failed!\n");                         \
+      exit(EXIT_FAILURE);                                                     \
+    }                                                                         \
+    memcpy(list.data, arr, n * sizeof(Type));                                 \
+    list.size = n;                                                            \
+    list.capacity = n;                                                        \
     return list;                                                              \
   }                                                                           \
                                                                               \
@@ -193,6 +212,16 @@
           (int (*)(const void *, const void *))comparator);                   \
     return true;                                                              \
   }                                                                           \
+  static inline bool list_merge_##Type(List_##Type *dest,                     \
+                                       const List_##Type *src)                \
+  {                                                                           \
+    if (!list_ensure_capacity_##Type(dest, src->size))                        \
+      return false;                                                           \
+    memcpy(&dest->data[dest->size], src->data, src->size * sizeof(Type));     \
+    dest->size += src->size;                                                  \
+    return true;                                                              \
+  }                                                                           \
+                                                                              \
   static inline void free_list_##Type(List_##Type *list)                      \
   {                                                                           \
     free(list->data);                                                         \
@@ -217,6 +246,50 @@
  * @brief Initialize a list of the given type with the given initial capacity.
  */
 #define List_init(Type, cap) init_list_##Type(cap)
+
+/**
+ * @def List_init_from_array(Type, arr, n)
+ * @brief Initialize a list with elements copied from an existing C array.
+ *
+ * Example:
+ * ```c
+ * int values[] = {1, 2, 3, 5};
+ * List(int) xs = List_init_from_array(int, values, 4);
+ *
+ * // or using a compound literal:
+ * List(int) ys = List_init_from_array(int, (int[]){10, 20, 30}, 3);
+ * ```
+ *
+ * @param Type The element type (e.g., `int`, `float`).
+ * @param arr  Pointer to the source C array.
+ * @param n    Number of elements in the source array.
+ * @return A fully initialized list containing the copied elements.
+ */
+
+#define List_init_from_array(Type, arr, n) init_list_from_array_##Type(arr, n)
+
+/**
+ * @def List_init_from_static_array(Type, arr)
+ * @brief Initialize a list from a compile-time array.
+ *
+ * This macro automatically infers the length of a static (stack-allocated) 
+ * array and calls the generated `init_list_from_array_<Type>` function.
+ *
+ * @param Type  The element type (e.g., `int`, `float`, `MyStruct`).
+ * @param arr   A static array (not a pointer). The macro uses 
+ *              `sizeof(arr) / sizeof(arr[0])` to compute the element count.
+ *
+ * @note This will raise a compiler error if `arr` is a pointer, 
+ *       since the size cannot be determined automatically.
+ *
+ * Example:
+ * ```c
+ * int xs[] = {1, 2, 3};
+ * List(int) list = List_init_from_static_array(int, xs);
+ * ```
+ */
+#define List_init_from_static_array(Type, arr) \
+    init_list_from_array_##Type((arr), (int)(sizeof(arr) / sizeof((arr)[0])))
 
 /**
  * @def List_append(Type, list, val)
@@ -274,6 +347,26 @@
  * @return Returns `true` on success, `false` if the list or comparator is NULL.
  */
 #define List_sort(Type, list, cmp) list_sort_##Type(list, cmp)
+
+/**
+ * @def List_merge(Type, dest, src)
+ * @brief Append all elements from one list into another.
+ *
+ * Example:
+ * ```c
+ * List(int) a = List_init_from_array(int, (int[]){1, 2, 3}, 3);
+ * List(int) b = List_init_from_array(int, (int[]){4, 5}, 2);
+ *
+ * List_merge(int, &a, &b); // a = [1, 2, 3, 4, 5]
+ * ```
+ *
+ * @param Type The element type (e.g., `int`, `float`).
+ * @param dest Pointer to the destination list (will be extended).
+ * @param src  Pointer to the source list (contents are copied, unchanged).
+ * @return Returns `true` on success, `false` if allocation failed.
+ */
+
+#define List_merge(Type, dest, src) list_merge_##Type(dest, src)
 
 /**
  * @def List_free(Type, list)
