@@ -1,9 +1,5 @@
 
 #include <CLIP/List.h>
-#include <bits/types/stack_t.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 
