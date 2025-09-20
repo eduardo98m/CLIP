@@ -31,7 +31,7 @@ typedef struct
 
 void Student_to_str(Student x, char *buf, size_t n)
 {
-  snprintf(buf, n, "\n{%s - %d}", x.name, x.age);
+  snprintf(buf, n, "{%s - %d}", x.name, x.age);
 }
 
 CLIP_DEFINE_LIST_TYPE(Student)
@@ -129,6 +129,10 @@ int main()
   List_merge(Student, &group1, &group2);
 
   printf("Merged groups : \n ");
+  List_println(Student, &group1);
+  printf("Reversed (and element poped) : \n ");
+  List_reverse(Student, &group1);
+  List_pop(Student, &group1, NULL);
   List_println(Student, &group1);
 
   // Cleanup

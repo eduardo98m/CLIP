@@ -16,6 +16,7 @@
  * - init_from_array
  * - ensure_capacity
  * - append
+ * - pop
  * - replace
  * - get
  * - get_ptr
@@ -27,6 +28,7 @@
  * - shrink_to_fit
  * - to_str (requires registration via CLIP_REGISTER_LIST_PRINT)
  * - to_str_custom (takes a user-supplied function)
+ * - reverse
  * - sort
  * - merge
  * - free
@@ -54,14 +56,16 @@
  *
  * - `list_append_<Type>`
  *
+ * - `list_pop_<Type>`
+ *
  * - `list_replace_<Type>`
  *
  * - `list_get_<Type>`
- * 
+ *
  * - `list_get_ptr_<Type>`
- * 
+ *
  * - `list_at_<Type>`
- * 
+ *
  * - `list_at_ptr_<Type>`
  *
  * - `list_remove_at_<Type>`
@@ -73,6 +77,8 @@
  * - `list_shrink_to_fit_<Type>`
  *
  * - `list_to_str_<Type>_custom`
+ * 
+ * - `list_reverse_<Type>` 
  *
  * - `list_sort_<Type>`
  *
@@ -159,6 +165,16 @@
     if (!list_ensure_capacity_##Type(list, 1))                                \
       return false;                                                           \
     list->data[list->size++] = value;                                         \
+    return true;                                                              \
+  }                                                                           \
+                                                                              \
+  static inline bool list_pop_##Type(List_##Type *list, Type *out)            \
+  {                                                                           \
+    if (list->size == 0)                                                      \
+      return false;                                                           \
+    if (out)                                                                  \
+      *out = list->data[list->size - 1];                                      \
+    list->size--;                                                             \
     return true;                                                              \
   }                                                                           \
                                                                               \
@@ -257,6 +273,18 @@
     }                                                                         \
     strcat(buffer, "]");                                                      \
     return buffer;                                                            \
+  }                                                                           \
+                                                                              \
+  static inline void list_reverse_##Type(List_##Type *list)                   \
+  {                                                                           \
+    if (list->size < 2)                                                       \
+      return;                                                                 \
+    for (int i = 0; i < list->size / 2; i++)                                  \
+    {                                                                         \
+      Type temp = list->data[i];                                              \
+      list->data[i] = list->data[list->size - 1 - i];                         \
+      list->data[list->size - 1 - i] = temp;                                  \
+    }                                                                         \
   }                                                                           \
                                                                               \
   static inline bool                                                          \
@@ -399,6 +427,12 @@
 #define List_append(Type, list, val) list_append_##Type(list, val)
 
 /**
+ * @def List_pop(Type, list, val)
+ * @brief Append a value to the list (resizing if needed).
+ */
+#define List_pop(Type, list, val) list_pop_##Type(list, val)
+
+/**
  * @def List_replace(Type, list, i, val)
  * @brief Replace the element at index `i` with a new value.
  */
@@ -407,18 +441,18 @@
 /**
  * @def List_get(Type, list, index)
  * @brief Safely retrieve an element at the specified index with bounds checking.
- * 
+ *
  * This function performs bounds checking and will print an error message to stderr
  * if the index is out of bounds, returning a zero-initialized value of the given type.
- * 
+ *
  * @param Type The element type (e.g., `int`, `float`, `struct MyStruct`).
  * @param list Pointer to the List(Type) structure.
  * @param index The zero-based index of the element to retrieve.
  * @return The element at the specified index, or zero-initialized value if out of bounds.
- * 
+ *
  * @note This is the safe version. For performance-critical code where bounds are
  *       guaranteed to be valid, consider using List_at() instead.
- * 
+ *
  * Example:
  * ```c
  * List(int) xs = List_init_from_array(int, (int[]){10, 20, 30}, 3);
@@ -431,18 +465,18 @@
 /**
  * @def List_get_ptr(Type, list, index)
  * @brief Safely retrieve a pointer to an element at the specified index with bounds checking.
- * 
+ *
  * This function performs bounds checking and will print an error message to stderr
  * if the index is out of bounds, returning NULL. The returned pointer can be used
  * to read or modify the element in place.
- * 
+ *
  * @param Type The element type (e.g., `int`, `float`, `struct MyStruct`).
  * @param list Pointer to the List(Type) structure.
  * @param index The zero-based index of the element to retrieve.
  * @return Pointer to the element at the specified index, or NULL if out of bounds.
- * 
+ *
  * @note Always check for NULL before dereferencing the returned pointer.
- * 
+ *
  * Example:
  * ```c
  * List(int) xs = List_init_from_array(int, (int[]){10, 20, 30}, 3);
@@ -453,36 +487,36 @@
  * }
  * ```
  */
-#define List_get_ptr(Type, list, index) list_get_ptr_##Type(list, index)  
+#define List_get_ptr(Type, list, index) list_get_ptr_##Type(list, index)
 
 /**
  * @def List_at(Type, list, index)
  * @brief Directly retrieve an element at the specified index without bounds checking.
- * 
+ *
  * This is the fast, unchecked version that directly accesses the underlying array.
- * No bounds checking is performed, so accessing an invalid index results in 
+ * No bounds checking is performed, so accessing an invalid index results in
  * undefined behavior.
- * 
+ *
  * @param Type The element type (e.g., `int`, `float`, `struct MyStruct`).
  * @param list Pointer to the List(Type) structure.
  * @param index The zero-based index of the element to retrieve.
  * @return The element at the specified index.
- * 
+ *
  * @warning This function does NOT perform bounds checking. Accessing an invalid
  *          index may cause a segmentation fault or return garbage data.
  *          Use List_get() for safer access with bounds checking.
- * 
+ *
  * @note This function can also be used for assignment: `List_at(int, &xs, 2) = 42;`
- * 
+ *
  * Example:
  * ```c
  * List(int) xs = List_init_from_array(int, (int[]){10, 20, 30}, 3);
- * 
+ *
  * // Fast read access (make sure index is valid!)
  * if (xs.size > 1) {
  *     int value = List_at(int, &xs, 1);  // Returns 20
  * }
- * 
+ *
  * // Direct assignment
  * if (xs.size > 2) {
  *     List_at(int, &xs, 2) = 99;  // Set element to 99
@@ -494,23 +528,23 @@
 /**
  * @def List_at_ptr(Type, list, index)
  * @brief Directly retrieve a pointer to an element at the specified index without bounds checking.
- * 
+ *
  * This is the fast, unchecked version that directly accesses the underlying array
  * and returns a pointer to the element. No bounds checking is performed.
- * 
+ *
  * @param Type The element type (e.g., `int`, `float`, `struct MyStruct`).
  * @param list Pointer to the List(Type) structure.
  * @param index The zero-based index of the element to retrieve.
  * @return Pointer to the element at the specified index.
- * 
+ *
  * @warning This function does NOT perform bounds checking. Accessing an invalid
  *          index may cause a segmentation fault. Use List_get_ptr() for safer
  *          access with bounds checking.
- * 
+ *
  * Example:
  * ```c
  * List(int) xs = List_init_from_array(int, (int[]){10, 20, 30}, 3);
- * 
+ *
  * // Fast pointer access (make sure index is valid!)
  * if (xs.size > 1) {
  *     int* ptr = List_at_ptr(int, &xs, 1);
@@ -559,6 +593,12 @@
  *        element-to-string function.
  */
 #define List_to_str_custom(Type, list, fn) list_to_str_##Type##_custom(list, fn)
+
+/**
+ * @def List_reverse(Type, list)
+ * @brief Reverses the given list
+ */
+#define List_reverse(Type, list) list_reverse_##Type(list)
 
 /**
  * @def List_sort(Type, list, cmp)
