@@ -5,7 +5,7 @@
  *
  * Example:
  * // Assuming no second argument is used for default behavior
- * CLIP_DEFINE_LIST_TYPE(int) 
+ * CLIP_DEFINE_LIST_TYPE(int)
  *
  * List(int) xs = List_init(int, 4);
  * List_append(int, &xs, 42);
@@ -513,10 +513,9 @@
     printf("\n");                \
   } while (0)
 
-
 /**
  * @def List_println_custom(Type, list, fn)
- * @brief Pretty-print a list directly to stdout using a custom 
+ * @brief Pretty-print a list directly to stdout using a custom
  * print function, followed by a newline.
  */
 #define List_println_custom(Type, list, fn) \
@@ -525,5 +524,32 @@
     List_print_custom(Type, list, fn);      \
     printf("\n");                           \
   } while (0)
+
+/**
+ * @def List_foreach(Type, var, list)
+ * @brief Iterates over the list, providing a pointer to the current element.
+ *
+ * Example:
+ * ```c
+ * List(int) xs = List_init_from_array(int, (int[]){10, 20, 30}, 3);
+ *
+ * List_foreach(int, item, &xs) {
+ * printf("Value: %d\n", *item); // 'item' is a 'int*'
+ * *item += 1; // You can modify the element!
+ * }
+ * ```
+ *
+ * @param Type  The element type (e.g., `int`, `float`).
+ * @param var   The name of the variable (a **pointer to Type**) to hold the
+ * current element.
+ * @param list  Pointer to the List(Type) structure (e.g., `&my_list`).
+ * 
+ * @note The iterator stores the size at the start of the loop to avoid problems.
+ */
+#define List_foreach(Type, var, list)                \
+  for (int _i_##var = 0, _size_##var = (list)->size; \
+       _i_##var < _size_##var;                       \
+       _i_##var++)                                   \
+    for (Type *var = &(list)->data[_i_##var]; var != NULL; var = NULL)
 
 #endif /* CLIP_LIST_H */
