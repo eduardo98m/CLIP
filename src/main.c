@@ -1,5 +1,6 @@
 
 #include <CLIP/List.h>
+#include <CLIP/Set.h>
 #include <string.h>
 
 // Helper for converting int → string
@@ -37,6 +38,15 @@ void Student_to_str(Student x, char *buf, size_t n)
 CLIP_DEFINE_LIST_TYPE(Student)
 CLIP_REGISTER_LIST_PRINT(Student, Student_to_str)
 
+int int_compare(const int *a, const int *b)
+{
+  return (*a < *b) ? -1 : (*a > *b) ? 1
+                                    : 0;
+}
+
+CLIP_DEFINE_SET_TYPE(int, int_compare)
+CLIP_REGISTER_SET_PRINT(int, int_to_str)
+
 int main()
 {
   // Lets create our group of Student
@@ -73,7 +83,8 @@ int main()
   List_append(int, &numbers, 0);
   List_append(int, &numbers, 23);
 
-  for (int i = 0; i < numbers.size; ++i){
+  for (int i = 0; i < numbers.size; ++i)
+  {
     printf("Getting Value: %d\n", List_get(int, &numbers, i));
   }
   List_append(int, &numbers, -5); // Add a duplicate
@@ -138,6 +149,27 @@ int main()
   // Cleanup
   List_free(Student, &group1);
   List_free(Student, &group2);
+
+  printf("SET testing\n");
+  Set(int) my_set = Set_init(int);
+
+  Set_insert(int, &my_set, 42);
+  Set_insert(int, &my_set, 17);
+  Set_insert(int, &my_set, 99);
+  
+  printf("SET created \n");
+
+  Set_println(int, &my_set); // Prints: {17, 42, 99}
+
+  printf("Contains 42: %s\n", Set_contains(int, &my_set, 42) ? "yes" : "no");
+  printf("Contains 62: %s\n", Set_contains(int, &my_set, 62) ? "yes" : "no");
+
+  printf("Size: %d\n", Set_size(int, &my_set));
+
+  Set_remove(int, &my_set, 42);
+  Set_println(int, &my_set); // Prints: {17, 99}
+
+  Set_free(int, &my_set);
 
   return 0;
 }

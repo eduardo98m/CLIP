@@ -16,8 +16,10 @@ enable_testing()
 
 add_executable(test_list "tests/test_list.c")
 target_include_directories(test_list PUBLIC ${INCLUDE_DIR})
-
 add_test(NAME test_list COMMAND test_list)
 
+add_executable(test_set "tests/test_set.c")
+target_include_directories(test_set PUBLIC ${INCLUDE_DIR})
+add_test(NAME test_set COMMAND test_set)
 
 
