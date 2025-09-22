@@ -8,7 +8,7 @@
  * int int_compare(const int* a, const int* b) {
  *     return (*a < *b) ? -1 : (*a > *b) ? 1 : 0;
  * }
- * 
+ *
  * CLIP_DEFINE_SET_TYPE(int, int_compare)
  *
  * Set(int) xs = Set_init(int);
@@ -61,218 +61,418 @@
  * @param CompareFunc The comparator function
  * @param BUF_SIZE The buffer size
  */
-#define CLIP_DEFINE_SET_TYPE_IMPL(Type, CompareFunc, BUF_SIZE, ...)                    \
-                                                                                       \
-  typedef struct SetNode_##Type                                                        \
-  {                                                                                    \
-    Type value;                                                                        \
-    struct SetNode_##Type *left;                                                       \
-    struct SetNode_##Type *right;                                                      \
-  } SetNode_##Type;                                                                    \
-                                                                                       \
-  typedef struct                                                                       \
-  {                                                                                    \
-    SetNode_##Type *root;                                                              \
-    int size;                                                                          \
-  } Set_##Type;                                                                        \
-                                                                                       \
-  static inline Set_##Type init_set_##Type()                                           \
-  {                                                                                    \
-    Set_##Type set = {0};                                                              \
-    return set;                                                                        \
-  }                                                                                    \
-                                                                                       \
-  static inline SetNode_##Type *set_node_new_##Type(Type value)                       \
-  {                                                                                    \
-    SetNode_##Type *node = (SetNode_##Type *)malloc(sizeof(SetNode_##Type));          \
-    if (!node)                                                                         \
-    {                                                                                  \
-      fprintf(stderr, "Memory allocation failed!\n");                                 \
-      exit(EXIT_FAILURE);                                                              \
-    }                                                                                  \
-    node->value = value;                                                               \
-    node->left = NULL;                                                                 \
-    node->right = NULL;                                                                \
-    return node;                                                                       \
-  }                                                                                    \
-                                                                                       \
-  static inline bool set_insert_node_##Type(SetNode_##Type **node, Type value,        \
-                                            bool *was_inserted)                        \
-  {                                                                                    \
-    if (!*node)                                                                        \
-    {                                                                                  \
-      *node = set_node_new_##Type(value);                                             \
-      *was_inserted = true;                                                            \
-      return true;                                                                     \
-    }                                                                                  \
-    int cmp = CompareFunc(&value, &(*node)->value);                                    \
-    if (cmp == 0)                                                                      \
-    {                                                                                  \
-      *was_inserted = false;                                                           \
-      return false;                                                                    \
-    }                                                                                  \
-    else if (cmp < 0)                                                                  \
-    {                                                                                  \
-      return set_insert_node_##Type(&(*node)->left, value, was_inserted);             \
-    }                                                                                  \
-    else                                                                               \
-    {                                                                                  \
-      return set_insert_node_##Type(&(*node)->right, value, was_inserted);            \
-    }                                                                                  \
-  }                                                                                    \
-                                                                                       \
-  static inline bool set_insert_##Type(Set_##Type *set, Type value)                   \
-  {                                                                                    \
-    bool was_inserted = false;                                                         \
-    bool success = set_insert_node_##Type(&set->root, value, &was_inserted);          \
-    if (was_inserted)                                                                  \
-      set->size++;                                                                     \
-    return success;                                                                    \
-  }                                                                                    \
-                                                                                       \
-  static inline bool set_contains_node_##Type(SetNode_##Type *node, Type value)       \
-  {                                                                                    \
-    if (!node)                                                                         \
-      return false;                                                                    \
-    int cmp = CompareFunc(&value, &node->value);                                       \
-    if (cmp == 0)                                                                      \
-      return true;                                                                     \
-    else if (cmp < 0)                                                                  \
-      return set_contains_node_##Type(node->left, value);                             \
-    else                                                                               \
-      return set_contains_node_##Type(node->right, value);                            \
-  }                                                                                    \
-                                                                                       \
-  static inline bool set_contains_##Type(Set_##Type *set, Type value)                 \
-  {                                                                                    \
-    return set_contains_node_##Type(set->root, value);                                \
-  }                                                                                    \
-                                                                                       \
-  static inline SetNode_##Type *set_find_min_node_##Type(SetNode_##Type *node)        \
-  {                                                                                    \
-    while (node && node->left)                                                         \
-      node = node->left;                                                               \
-    return node;                                                                       \
-  }                                                                                    \
-                                                                                       \
-  static inline SetNode_##Type *set_remove_node_##Type(SetNode_##Type *node,          \
-                                                       Type value, bool *was_removed)  \
-  {                                                                                    \
-    if (!node)                                                                         \
-    {                                                                                  \
-      *was_removed = false;                                                            \
-      return NULL;                                                                     \
-    }                                                                                  \
-                                                                                       \
-    int cmp = CompareFunc(&value, &node->value);                                       \
-    if (cmp < 0)                                                                       \
-    {                                                                                  \
-      node->left = set_remove_node_##Type(node->left, value, was_removed);            \
-    }                                                                                  \
-    else if (cmp > 0)                                                                  \
-    {                                                                                  \
-      node->right = set_remove_node_##Type(node->right, value, was_removed);          \
-    }                                                                                  \
-    else                                                                               \
-    {                                                                                  \
-      *was_removed = true;                                                             \
-      if (!node->left)                                                                 \
-      {                                                                                \
-        SetNode_##Type *temp = node->right;                                            \
-        free(node);                                                                    \
-        return temp;                                                                   \
-      }                                                                                \
-      else if (!node->right)                                                           \
-      {                                                                                \
-        SetNode_##Type *temp = node->left;                                             \
-        free(node);                                                                    \
-        return temp;                                                                   \
-      }                                                                                \
-      SetNode_##Type *temp = set_find_min_node_##Type(node->right);                   \
-      node->value = temp->value;                                                       \
-      bool dummy = false;                                                              \
-      node->right = set_remove_node_##Type(node->right, temp->value, &dummy);         \
-    }                                                                                  \
-    return node;                                                                       \
-  }                                                                                    \
-                                                                                       \
-  static inline bool set_remove_##Type(Set_##Type *set, Type value)                   \
-  {                                                                                    \
-    bool was_removed = false;                                                          \
-    set->root = set_remove_node_##Type(set->root, value, &was_removed);               \
-    if (was_removed)                                                                   \
-      set->size--;                                                                     \
-    return was_removed;                                                                \
-  }                                                                                    \
-                                                                                       \
-  static inline int set_size_##Type(Set_##Type *set)                                  \
-  {                                                                                    \
-    return set->size;                                                                  \
-  }                                                                                    \
-                                                                                       \
-  static inline bool set_empty_##Type(Set_##Type *set)                                \
-  {                                                                                    \
-    return set->size == 0;                                                             \
-  }                                                                                    \
-                                                                                       \
-  static inline void set_clear_node_##Type(SetNode_##Type *node)                      \
-  {                                                                                    \
-    if (!node)                                                                         \
-      return;                                                                          \
-    set_clear_node_##Type(node->left);                                                \
-    set_clear_node_##Type(node->right);                                               \
-    free(node);                                                                        \
-  }                                                                                    \
-                                                                                       \
-  static inline void set_clear_##Type(Set_##Type *set)                                \
-  {                                                                                    \
-    set_clear_node_##Type(set->root);                                                 \
-    set->root = NULL;                                                                  \
-    set->size = 0;                                                                     \
-  }                                                                                    \
-                                                                                       \
-  static inline void free_set_##Type(Set_##Type *set)                                 \
-  {                                                                                    \
-    set_clear_##Type(set);                                                             \
-  }                                                                                    \
-                                                                                       \
-  static inline void set_to_str_node_##Type(SetNode_##Type *node, char *buf,          \
-                                            size_t size,                              \
-                                            void (*elem_to_str)(Type, char *, size_t), \
-                                            bool *is_first)                            \
-  {                                                                                    \
-    if (!node)                                                                         \
-      return;                                                                          \
-    set_to_str_node_##Type(node->left, buf, size, elem_to_str, is_first);            \
-    if (!*is_first)                                                                    \
-    {                                                                                  \
-      size_t current_len = strlen(buf);                                                \
-      if (current_len + 2 < size)                                                      \
-        strcat(buf, ", ");                                                             \
-    }                                                                                  \
-    size_t current_len = strlen(buf);                                                  \
-    if (current_len < size)                                                            \
-      elem_to_str(node->value, buf + current_len, size - current_len);                \
-    *is_first = false;                                                                 \
-    set_to_str_node_##Type(node->right, buf, size, elem_to_str, is_first);           \
-  }                                                                                    \
-                                                                                       \
-  static inline char *set_to_str_##Type##_custom(Set_##Type *set,                     \
-                                                 void (*elem_to_str)(Type, char *, size_t)) \
-  {                                                                                    \
-    if (!set)                                                                          \
-      return NULL;                                                                     \
-    size_t bufsize = set->size * BUF_SIZE + 16;                                       \
-    char *buffer = malloc(bufsize);                                                    \
-    if (!buffer)                                                                       \
-      return NULL;                                                                     \
-    strcpy(buffer, "{");                                                               \
-    bool is_first = true;                                                              \
-    set_to_str_node_##Type(set->root, buffer, bufsize, elem_to_str, &is_first);      \
-    size_t current_len = strlen(buffer);                                               \
-    if (current_len + 1 < bufsize)                                                     \
-      strcat(buffer, "}");                                                             \
-    return buffer;                                                                     \
+#define CLIP_DEFINE_SET_TYPE_IMPL(Type, CompareFunc, BUF_SIZE, ...)                                    \
+                                                                                                       \
+  typedef enum                                                                                         \
+  {                                                                                                    \
+    SET_RED_##Type,                                                                                    \
+    SET_BLACK_##Type                                                                                   \
+  } SetColor_##Type;                                                                                   \
+                                                                                                       \
+  typedef struct SetNode_##Type                                                                        \
+  {                                                                                                    \
+    Type value;                                                                                        \
+    struct SetNode_##Type *left, *right, *parent;                                                      \
+    SetColor_##Type color;                                                                             \
+  } SetNode_##Type;                                                                                    \
+                                                                                                       \
+  typedef struct                                                                                       \
+  {                                                                                                    \
+    SetNode_##Type *root;                                                                              \
+    int size;                                                                                          \
+  } Set_##Type;                                                                                        \
+                                                                                                       \
+  static inline Set_##Type init_set_##Type()                                                           \
+  {                                                                                                    \
+    Set_##Type set = {0};                                                                              \
+    return set;                                                                                        \
+  }                                                                                                    \
+                                                                                                       \
+  static inline SetNode_##Type *set_node_new_##Type(Type value)                                        \
+  {                                                                                                    \
+    SetNode_##Type *node = (SetNode_##Type *)malloc(sizeof(SetNode_##Type));                           \
+    if (!node)                                                                                         \
+    {                                                                                                  \
+      fprintf(stderr, "Memory allocation failed!\n");                                                  \
+      exit(EXIT_FAILURE);                                                                              \
+    }                                                                                                  \
+    node->value = value;                                                                               \
+    node->left = node->right = node->parent = NULL;                                                    \
+    node->color = SET_RED_##Type;                                                                      \
+    return node;                                                                                       \
+  }                                                                                                    \
+                                                                                                       \
+  static inline void rotate_left_##Type(Set_##Type *set, SetNode_##Type *x)                            \
+  {                                                                                                    \
+    SetNode_##Type *y = x->right;                                                                      \
+    x->right = y->left;                                                                                \
+    if (y->left)                                                                                       \
+      y->left->parent = x;                                                                             \
+    y->parent = x->parent;                                                                             \
+    if (!x->parent)                                                                                    \
+      set->root = y;                                                                                   \
+    else if (x == x->parent->left)                                                                     \
+      x->parent->left = y;                                                                             \
+    else                                                                                               \
+      x->parent->right = y;                                                                            \
+    y->left = x;                                                                                       \
+    x->parent = y;                                                                                     \
+  }                                                                                                    \
+                                                                                                       \
+  static inline void rotate_right_##Type(Set_##Type *set, SetNode_##Type *y)                           \
+  {                                                                                                    \
+    SetNode_##Type *x = y->left;                                                                       \
+    y->left = x->right;                                                                                \
+    if (x->right)                                                                                      \
+      x->right->parent = y;                                                                            \
+    x->parent = y->parent;                                                                             \
+    if (!y->parent)                                                                                    \
+      set->root = x;                                                                                   \
+    else if (y == y->parent->left)                                                                     \
+      y->parent->left = x;                                                                             \
+    else                                                                                               \
+      y->parent->right = x;                                                                            \
+    x->right = y;                                                                                      \
+    y->parent = x;                                                                                     \
+  }                                                                                                    \
+  static inline void insert_fixup_##Type(Set_##Type *set, SetNode_##Type *z)                           \
+  {                                                                                                    \
+    while (z->parent && z->parent->color == SET_RED_##Type)                                            \
+    {                                                                                                  \
+      if (z->parent == z->parent->parent->left)                                                        \
+      {                                                                                                \
+        SetNode_##Type *y = z->parent->parent->right; /* uncle */                                      \
+        if (y && y->color == SET_RED_##Type)                                                           \
+        {                                                                                              \
+          z->parent->color = SET_BLACK_##Type;                                                         \
+          y->color = SET_BLACK_##Type;                                                                 \
+          z->parent->parent->color = SET_RED_##Type;                                                   \
+          z = z->parent->parent;                                                                       \
+        }                                                                                              \
+        else                                                                                           \
+        {                                                                                              \
+          if (z == z->parent->right)                                                                   \
+          {                                                                                            \
+            z = z->parent;                                                                             \
+            rotate_left_##Type(set, z);                                                                \
+          }                                                                                            \
+          z->parent->color = SET_BLACK_##Type;                                                         \
+          z->parent->parent->color = SET_RED_##Type;                                                   \
+          rotate_right_##Type(set, z->parent->parent);                                                 \
+        }                                                                                              \
+      }                                                                                                \
+      else                                                                                             \
+      {                                              /* mirror case */                                 \
+        SetNode_##Type *y = z->parent->parent->left; /* uncle */                                       \
+        if (y && y->color == SET_RED_##Type)                                                           \
+        {                                                                                              \
+          z->parent->color = SET_BLACK_##Type;                                                         \
+          y->color = SET_BLACK_##Type;                                                                 \
+          z->parent->parent->color = SET_RED_##Type;                                                   \
+          z = z->parent->parent;                                                                       \
+        }                                                                                              \
+        else                                                                                           \
+        {                                                                                              \
+          if (z == z->parent->left)                                                                    \
+          {                                                                                            \
+            z = z->parent;                                                                             \
+            rotate_right_##Type(set, z);                                                               \
+          }                                                                                            \
+          z->parent->color = SET_BLACK_##Type;                                                         \
+          z->parent->parent->color = SET_RED_##Type;                                                   \
+          rotate_left_##Type(set, z->parent->parent);                                                  \
+        }                                                                                              \
+      }                                                                                                \
+    }                                                                                                  \
+    set->root->color = SET_BLACK_##Type;                                                               \
+  }                                                                                                    \
+  static inline void transplant_##Type(Set_##Type *set,                                                \
+                                       SetNode_##Type *u,                                              \
+                                       SetNode_##Type *v)                                              \
+  {                                                                                                    \
+    if (!u->parent)                                                                                    \
+      set->root = v;                                                                                   \
+    else if (u == u->parent->left)                                                                     \
+      u->parent->left = v;                                                                             \
+    else                                                                                               \
+      u->parent->right = v;                                                                            \
+                                                                                                       \
+    if (v)                                                                                             \
+      v->parent = u->parent;                                                                           \
+  }                                                                                                    \
+  static inline void remove_fixup_##Type(Set_##Type *set, SetNode_##Type *x, SetNode_##Type *x_parent) \
+  {                                                                                                    \
+    while ((x != set->root) && (!x || x->color == SET_BLACK_##Type))                                   \
+    {                                                                                                  \
+      if (x == (x_parent ? x_parent->left : NULL))                                                     \
+      {                                                                                                \
+        SetNode_##Type *w = x_parent ? x_parent->right : NULL;                                         \
+        if (w && w->color == SET_RED_##Type)                                                           \
+        {                                                                                              \
+          w->color = SET_BLACK_##Type;                                                                 \
+          x_parent->color = SET_RED_##Type;                                                            \
+          rotate_left_##Type(set, x_parent);                                                           \
+          w = x_parent->right;                                                                         \
+        }                                                                                              \
+        if ((!w->left || w->left->color == SET_BLACK_##Type) &&                                        \
+            (!w->right || w->right->color == SET_BLACK_##Type))                                        \
+        {                                                                                              \
+          if (w)                                                                                       \
+            w->color = SET_RED_##Type;                                                                 \
+          x = x_parent;                                                                                \
+          x_parent = x ? x->parent : NULL;                                                             \
+        }                                                                                              \
+        else                                                                                           \
+        {                                                                                              \
+          if (!w->right || w->right->color == SET_BLACK_##Type)                                        \
+          {                                                                                            \
+            if (w->left)                                                                               \
+              w->left->color = SET_BLACK_##Type;                                                       \
+            if (w)                                                                                     \
+              w->color = SET_RED_##Type;                                                               \
+            rotate_right_##Type(set, w);                                                               \
+            w = x_parent ? x_parent->right : NULL;                                                     \
+          }                                                                                            \
+          if (w)                                                                                       \
+            w->color = x_parent->color;                                                                \
+          if (x_parent)                                                                                \
+            x_parent->color = SET_BLACK_##Type;                                                        \
+          if (w && w->right)                                                                           \
+            w->right->color = SET_BLACK_##Type;                                                        \
+          rotate_left_##Type(set, x_parent);                                                           \
+          x = set->root;                                                                               \
+        }                                                                                              \
+      }                                                                                                \
+      else                                                                                             \
+      {                                                                                                \
+        SetNode_##Type *w = x_parent ? x_parent->left : NULL;                                          \
+        if (w && w->color == SET_RED_##Type)                                                           \
+        {                                                                                              \
+          w->color = SET_BLACK_##Type;                                                                 \
+          x_parent->color = SET_RED_##Type;                                                            \
+          rotate_right_##Type(set, x_parent);                                                          \
+          w = x_parent->left;                                                                          \
+        }                                                                                              \
+        if ((!w->right || w->right->color == SET_BLACK_##Type) &&                                      \
+            (!w->left || w->left->color == SET_BLACK_##Type))                                          \
+        {                                                                                              \
+          if (w)                                                                                       \
+            w->color = SET_RED_##Type;                                                                 \
+          x = x_parent;                                                                                \
+          x_parent = x ? x->parent : NULL;                                                             \
+        }                                                                                              \
+        else                                                                                           \
+        {                                                                                              \
+          if (!w->left || w->left->color == SET_BLACK_##Type)                                          \
+          {                                                                                            \
+            if (w->right)                                                                              \
+              w->right->color = SET_BLACK_##Type;                                                      \
+            if (w)                                                                                     \
+              w->color = SET_RED_##Type;                                                               \
+            rotate_left_##Type(set, w);                                                                \
+            w = x_parent ? x_parent->left : NULL;                                                      \
+          }                                                                                            \
+          if (w)                                                                                       \
+            w->color = x_parent->color;                                                                \
+          if (x_parent)                                                                                \
+            x_parent->color = SET_BLACK_##Type;                                                        \
+          if (w && w->left)                                                                            \
+            w->left->color = SET_BLACK_##Type;                                                         \
+          rotate_right_##Type(set, x_parent);                                                          \
+          x = set->root;                                                                               \
+        }                                                                                              \
+      }                                                                                                \
+    }                                                                                                  \
+    if (x)                                                                                             \
+      x->color = SET_BLACK_##Type;                                                                     \
+  }                                                                                                    \
+                                                                                                       \
+  static inline bool set_insert_##Type(Set_##Type *set, Type value)                                    \
+  {                                                                                                    \
+    SetNode_##Type *y = NULL;                                                                          \
+    SetNode_##Type *x = set->root;                                                                     \
+    while (x)                                                                                          \
+    {                                                                                                  \
+      int cmp = CompareFunc(&value, &x->value);                                                        \
+      if (cmp == 0)                                                                                    \
+        return false; /* duplicate */                                                                  \
+      y = x;                                                                                           \
+      x = (cmp < 0) ? x->left : x->right;                                                              \
+    }                                                                                                  \
+    SetNode_##Type *z = set_node_new_##Type(value);                                                    \
+    z->parent = y;                                                                                     \
+    if (!y)                                                                                            \
+      set->root = z;                                                                                   \
+    else if (CompareFunc(&z->value, &y->value) < 0)                                                    \
+      y->left = z;                                                                                     \
+    else                                                                                               \
+      y->right = z;                                                                                    \
+    insert_fixup_##Type(set, z);                                                                       \
+    set->size++;                                                                                       \
+    return true;                                                                                       \
+  }                                                                                                    \
+                                                                                                       \
+  static inline bool set_contains_node_##Type(SetNode_##Type *node, Type value)                        \
+  {                                                                                                    \
+    if (!node)                                                                                         \
+      return false;                                                                                    \
+    int cmp = CompareFunc(&value, &node->value);                                                       \
+    if (cmp == 0)                                                                                      \
+      return true;                                                                                     \
+    else if (cmp < 0)                                                                                  \
+      return set_contains_node_##Type(node->left, value);                                              \
+    else                                                                                               \
+      return set_contains_node_##Type(node->right, value);                                             \
+  }                                                                                                    \
+                                                                                                       \
+  static inline bool set_contains_##Type(Set_##Type *set, Type value)                                  \
+  {                                                                                                    \
+    return set_contains_node_##Type(set->root, value);                                                 \
+  }                                                                                                    \
+                                                                                                       \
+  static inline SetNode_##Type *set_find_min_node_##Type(SetNode_##Type *node)                         \
+  {                                                                                                    \
+    while (node && node->left)                                                                         \
+      node = node->left;                                                                               \
+    return node;                                                                                       \
+  }                                                                                                    \
+                                                                                                       \
+  static inline bool set_remove_##Type(Set_##Type *set, Type value)                                    \
+  {                                                                                                    \
+    SetNode_##Type *z = set->root;                                                                     \
+    while (z)                                                                                          \
+    {                                                                                                  \
+      int cmp = CompareFunc(&value, &z->value);                                                        \
+      if (cmp == 0)                                                                                    \
+        break;                                                                                         \
+      else if (cmp < 0)                                                                                \
+        z = z->left;                                                                                   \
+      else                                                                                             \
+        z = z->right;                                                                                  \
+    }                                                                                                  \
+    if (!z)                                                                                            \
+      return false;                                                                                    \
+                                                                                                       \
+    SetNode_##Type *y = z;                                                                             \
+    SetNode_##Type *x = NULL;                                                                          \
+    SetNode_##Type *x_parent = NULL;                                                                   \
+    SetColor_##Type y_original_color = y->color;                                                       \
+                                                                                                       \
+    if (!z->left)                                                                                      \
+    {                                                                                                  \
+      x = z->right;                                                                                    \
+      x_parent = z->parent;                                                                            \
+      transplant_##Type(set, z, z->right);                                                             \
+    }                                                                                                  \
+    else if (!z->right)                                                                                \
+    {                                                                                                  \
+      x = z->left;                                                                                     \
+      x_parent = z->parent;                                                                            \
+      transplant_##Type(set, z, z->left);                                                              \
+    }                                                                                                  \
+    else                                                                                               \
+    {                                                                                                  \
+      y = set_find_min_node_##Type(z->right);                                                          \
+      y_original_color = y->color;                                                                     \
+      x = y->right;                                                                                    \
+      if (y->parent == z)                                                                              \
+      {                                                                                                \
+        if (x)                                                                                         \
+          x->parent = y;                                                                               \
+        x_parent = y;                                                                                  \
+      }                                                                                                \
+      else                                                                                             \
+      {                                                                                                \
+        transplant_##Type(set, y, y->right);                                                           \
+        y->right = z->right;                                                                           \
+        if (y->right)                                                                                  \
+          y->right->parent = y;                                                                        \
+        x_parent = y->parent;                                                                          \
+      }                                                                                                \
+      transplant_##Type(set, z, y);                                                                    \
+      y->left = z->left;                                                                               \
+      if (y->left)                                                                                     \
+        y->left->parent = y;                                                                           \
+      y->color = z->color;                                                                             \
+    }                                                                                                  \
+                                                                                                       \
+    free(z);                                                                                           \
+    set->size--;                                                                                       \
+                                                                                                       \
+    if (y_original_color == SET_BLACK_##Type)                                                          \
+      remove_fixup_##Type(set, x, x_parent);                                                           \
+                                                                                                       \
+    return true;                                                                                       \
+  }                                                                                                    \
+                                                                                                       \
+  static inline int set_size_##Type(Set_##Type *set)                                                   \
+  {                                                                                                    \
+    return set->size;                                                                                  \
+  }                                                                                                    \
+                                                                                                       \
+  static inline bool set_empty_##Type(Set_##Type *set)                                                 \
+  {                                                                                                    \
+    return set->size == 0;                                                                             \
+  }                                                                                                    \
+                                                                                                       \
+  static inline void set_clear_node_##Type(SetNode_##Type *node)                                       \
+  {                                                                                                    \
+    if (!node)                                                                                         \
+      return;                                                                                          \
+    set_clear_node_##Type(node->left);                                                                 \
+    set_clear_node_##Type(node->right);                                                                \
+    free(node);                                                                                        \
+  }                                                                                                    \
+                                                                                                       \
+  static inline void set_clear_##Type(Set_##Type *set)                                                 \
+  {                                                                                                    \
+    set_clear_node_##Type(set->root);                                                                  \
+    set->root = NULL;                                                                                  \
+    set->size = 0;                                                                                     \
+  }                                                                                                    \
+                                                                                                       \
+  static inline void free_set_##Type(Set_##Type *set)                                                  \
+  {                                                                                                    \
+    set_clear_##Type(set);                                                                             \
+  }                                                                                                    \
+                                                                                                       \
+  static inline void set_to_str_node_##Type(SetNode_##Type *node, char *buf,                           \
+                                            size_t size,                                               \
+                                            void (*elem_to_str)(Type, char *, size_t),                 \
+                                            bool *is_first)                                            \
+  {                                                                                                    \
+    if (!node)                                                                                         \
+      return;                                                                                          \
+    set_to_str_node_##Type(node->left, buf, size, elem_to_str, is_first);                              \
+    if (!*is_first)                                                                                    \
+    {                                                                                                  \
+      size_t current_len = strlen(buf);                                                                \
+      if (current_len + 2 < size)                                                                      \
+        strcat(buf, ", ");                                                                             \
+    }                                                                                                  \
+    size_t current_len = strlen(buf);                                                                  \
+    if (current_len < size)                                                                            \
+      elem_to_str(node->value, buf + current_len, size - current_len);                                 \
+    *is_first = false;                                                                                 \
+    set_to_str_node_##Type(node->right, buf, size, elem_to_str, is_first);                             \
+  }                                                                                                    \
+                                                                                                       \
+  static inline char *set_to_str_##Type##_custom(Set_##Type *set,                                      \
+                                                 void (*elem_to_str)(Type, char *, size_t))            \
+  {                                                                                                    \
+    if (!set)                                                                                          \
+      return NULL;                                                                                     \
+    size_t bufsize = set->size * BUF_SIZE + 16;                                                        \
+    char *buffer = malloc(bufsize);                                                                    \
+    if (!buffer)                                                                                       \
+      return NULL;                                                                                     \
+    strcpy(buffer, "{");                                                                               \
+    bool is_first = true;                                                                              \
+    set_to_str_node_##Type(set->root, buffer, bufsize, elem_to_str, &is_first);                        \
+    size_t current_len = strlen(buffer);                                                               \
+    if (current_len + 1 < bufsize)                                                                     \
+      strcat(buffer, "}");                                                                             \
+    return buffer;                                                                                     \
   }
 
 /**
@@ -304,12 +504,12 @@
  */
 #define CLIP_REGISTER_SET_PRINT(Type, print_fn)                              \
   static inline char *set_to_str_##Type##_main(Set_##Type *set)              \
-  {                                                                           \
-    if (!print_fn)                                                            \
-    {                                                                         \
+  {                                                                          \
+    if (!print_fn)                                                           \
+    {                                                                        \
       fprintf(stderr, "No print function registered for type " #Type "!\n"); \
-      return NULL;                                                            \
-    }                                                                         \
+      return NULL;                                                           \
+    }                                                                        \
     return set_to_str_##Type##_custom(set, print_fn);                        \
   }
 
