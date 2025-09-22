@@ -465,6 +465,13 @@
 #define List_replace(Type, list, i, val) list_replace_##Type(list, i, val)
 
 /**
+ * @def List_insert(Type, list, i, val)
+ * @brief Insert an element at index `i` with a new value.
+ */
+#define List_insert(Type, list, i, val) list_insert_##Type(list, i, val)
+
+
+/**
  * @def List_get(Type, list, index)
  * @brief Safely retrieve an element at the specified index with bounds checking.
  *
