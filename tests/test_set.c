@@ -423,6 +423,162 @@ TEST(randomized_stress)
     Set_free(int, &xs);
 }
 
+TEST(join_empty_sets)
+{
+    Set(int) dest = Set_init(int);
+    Set(int) src = Set_init(int);
+
+    int added = Set_join(int, &dest, &src);
+    ASSERT_TRUE(added == 0);
+    ASSERT_TRUE(Set_size(int, &dest) == 0);
+    ASSERT_TRUE(Set_size(int, &src) == 0);
+
+    Set_free(int, &dest);
+    Set_free(int, &src);
+}
+
+TEST(join_with_empty_source)
+{
+    Set(int) dest = Set_init(int);
+    Set(int) src = Set_init(int);
+
+    Set_insert(int, &dest, 1);
+    Set_insert(int, &dest, 2);
+    Set_insert(int, &dest, 3);
+
+    int added = Set_join(int, &dest, &src);
+    ASSERT_TRUE(added == 0);
+    ASSERT_TRUE(Set_size(int, &dest) == 3);
+    ASSERT_TRUE(Set_size(int, &src) == 0);
+    ASSERT_TRUE(Set_contains(int, &dest, 1));
+    ASSERT_TRUE(Set_contains(int, &dest, 2));
+    ASSERT_TRUE(Set_contains(int, &dest, 3));
+
+    Set_free(int, &dest);
+    Set_free(int, &src);
+}
+
+TEST(join_with_empty_destination)
+{
+    Set(int) dest = Set_init(int);
+    Set(int) src = Set_init(int);
+
+    Set_insert(int, &src, 4);
+    Set_insert(int, &src, 5);
+    Set_insert(int, &src, 6);
+
+    int added = Set_join(int, &dest, &src);
+    ASSERT_TRUE(added == 3);
+    ASSERT_TRUE(Set_size(int, &dest) == 3);
+    ASSERT_TRUE(Set_size(int, &src) == 0);
+    ASSERT_TRUE(Set_contains(int, &dest, 4));
+    ASSERT_TRUE(Set_contains(int, &dest, 5));
+    ASSERT_TRUE(Set_contains(int, &dest, 6));
+
+    Set_free(int, &dest);
+    Set_free(int, &src);
+}
+
+TEST(join_overlapping_sets)
+{
+    Set(int) dest = Set_init(int);
+    Set(int) src = Set_init(int);
+
+    // Add some elements to both sets
+    Set_insert(int, &dest, 1);
+    Set_insert(int, &dest, 2);
+    Set_insert(int, &dest, 3);
+
+    Set_insert(int, &src, 3); // duplicate
+    Set_insert(int, &src, 4);
+    Set_insert(int, &src, 5);
+
+    int added = Set_join(int, &dest, &src);
+    ASSERT_TRUE(added == 2); // Only 4 and 5 are new
+    ASSERT_TRUE(Set_size(int, &dest) == 5);
+    ASSERT_TRUE(Set_size(int, &src) == 0);
+
+    // Check all elements are in dest
+    ASSERT_TRUE(Set_contains(int, &dest, 1));
+    ASSERT_TRUE(Set_contains(int, &dest, 2));
+    ASSERT_TRUE(Set_contains(int, &dest, 3));
+    ASSERT_TRUE(Set_contains(int, &dest, 4));
+    ASSERT_TRUE(Set_contains(int, &dest, 5));
+
+    Set_free(int, &dest);
+    Set_free(int, &src);
+}
+
+TEST(join_large_sets)
+{
+    Set(int) dest = Set_init(int);
+    Set(int) src = Set_init(int);
+
+    // Add even numbers to dest
+    for (int i = 0; i < 50; i += 2)
+    {
+        Set_insert(int, &dest, i);
+    }
+
+    // Add odd numbers and some even numbers to src
+    for (int i = 1; i < 50; i += 2)
+    {
+        Set_insert(int, &src, i);
+    }
+    Set_insert(int, &src, 10); // duplicate
+    Set_insert(int, &src, 20); // duplicate
+
+    int added = Set_join(int, &dest, &src);
+    ASSERT_TRUE(added == 25);                // 25 odd numbers added
+    ASSERT_TRUE(Set_size(int, &dest) == 50); // all numbers 0-49
+    ASSERT_TRUE(Set_size(int, &src) == 0);
+
+    // Verify all numbers are present
+    for (int i = 0; i < 50; i++)
+    {
+        ASSERT_TRUE(Set_contains(int, &dest, i));
+    }
+
+    Set_free(int, &dest);
+    Set_free(int, &src);
+}
+
+TEST(join_and_then_insert)
+{
+    Set(int) dest = Set_init(int);
+    Set(int) src = Set_init(int);
+
+    Set_insert(int, &dest, 1);
+    Set_insert(int, &src, 2);
+    Set_insert(int, &src, 3);
+
+    int added = Set_join(int, &dest, &src);
+    ASSERT_TRUE(added == 2);
+    ASSERT_TRUE(Set_size(int, &dest) == 3);
+
+    // Should still be able to insert after join
+    ASSERT_TRUE(Set_insert(int, &dest, 4));
+    ASSERT_TRUE(Set_size(int, &dest) == 4);
+    ASSERT_TRUE(Set_contains(int, &dest, 4));
+
+    Set_free(int, &dest);
+    Set_free(int, &src);
+}
+
+TEST(join_null_source)
+{
+    Set(int) dest = Set_init(int);
+    Set_insert(int, &dest, 1);
+    Set_insert(int, &dest, 2);
+
+    // Test with NULL source (should be safe)
+    int added = Set_join(int, &dest, NULL);
+    ASSERT_TRUE(added == 0);
+    ASSERT_TRUE(Set_size(int, &dest) == 2);
+
+    Set_free(int, &dest);
+}
+
 TEST_SUITE(
     RUN_TEST(init),
     RUN_TEST(insert_and_contains),
@@ -440,5 +596,11 @@ TEST_SUITE(
     RUN_TEST(red_black_invariants),
     RUN_TEST(sequential_insert_remove),
     RUN_TEST(reverse_order_removal),
-    RUN_TEST(randomized_stress)
-)
+    RUN_TEST(randomized_stress),
+    RUN_TEST(join_empty_sets),
+    RUN_TEST(join_with_empty_source),
+    RUN_TEST(join_with_empty_destination),
+    RUN_TEST(join_overlapping_sets),
+    RUN_TEST(join_large_sets),
+    RUN_TEST(join_and_then_insert),
+    RUN_TEST(join_null_source))

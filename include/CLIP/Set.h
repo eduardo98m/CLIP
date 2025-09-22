@@ -405,7 +405,8 @@
     return true;                                                                                       \
   }                                                                                                    \
                                                                                                        \
-  static inline int set_size_##Type(Set_##Type *set)                                                   \
+  static inline int                                                                                    \
+  set_size_##Type(Set_##Type *set)                                                                     \
   {                                                                                                    \
     return set->size;                                                                                  \
   }                                                                                                    \
@@ -429,6 +430,36 @@
     set_clear_node_##Type(set->root);                                                                  \
     set->root = NULL;                                                                                  \
     set->size = 0;                                                                                     \
+  }                                                                                                    \
+  /**                                                                                                  \
+   * @brief Helper function to recursively insert all nodes from one set into another.                 \
+   */                                                                                                  \
+  static inline void set_join_recursive_##Type(Set_##Type *dest, SetNode_##Type *node)                 \
+  {                                                                                                    \
+    if (!node)                                                                                         \
+      return;                                                                                          \
+    set_join_recursive_##Type(dest, node->left);                                                       \
+    set_join_recursive_##Type(dest, node->right);                                                      \
+    set_insert_##Type(dest, node->value);                                                              \
+  }                                                                                                    \
+                                                                                                       \
+  /**                                                                                                  \
+   * @def Set_join(Type, dest, src)                                                                    \
+   * @brief Merge all elements from source set into destination set.                                   \
+   * After this operation, source set will be cleared.                                                 \
+   * Elements that already exist in dest will not be duplicated.                                       \
+   * @return The number of elements successfully added from src to dest.                               \
+   */                                                                                                  \
+  static inline int set_join_##Type(Set_##Type *dest, Set_##Type *src)                                 \
+  {                                                                                                    \
+    if (!src || !dest || set_empty_##Type(src))                                                        \
+      return 0;                                                                                        \
+                                                                                                       \
+    int initial_size = set_size_##Type(dest);                                                          \
+    set_join_recursive_##Type(dest, src->root);                                                        \
+    int final_size = set_size_##Type(dest);                                                            \
+    set_clear_##Type(src);                                                                             \
+    return final_size - initial_size;                                                                  \
   }                                                                                                    \
                                                                                                        \
   static inline void free_set_##Type(Set_##Type *set)                                                  \
@@ -550,6 +581,15 @@
  * @return Returns `true` if the value was removed, `false` if it didn't exist.
  */
 #define Set_remove(Type, set, val) set_remove_##Type(set, val)
+
+/**
+ * @def Set_join(Type, dest, src)
+ * @brief Merge all elements from source set into destination set.
+ * After this operation, source set will be cleared.
+ * Elements that already exist in dest will not be duplicated.
+ * @return The number of elements successfully added from src to dest.
+ */
+#define Set_join(Type, dest, src) set_join_##Type(dest, src)
 
 /**
  * @def Set_size(Type, set)
