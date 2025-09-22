@@ -35,6 +35,7 @@ void Student_to_str(Student x, char *buf, size_t n)
   snprintf(buf, n, "{%s - %d}", x.name, x.age);
 }
 
+
 CLIP_DEFINE_LIST_TYPE(Student)
 CLIP_REGISTER_LIST_PRINT(Student, Student_to_str)
 
