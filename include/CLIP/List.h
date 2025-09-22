@@ -18,6 +18,7 @@
  * - append
  * - pop
  * - replace
+ * - insert
  * - get
  * - get_ptr
  * - at
@@ -60,6 +61,12 @@
  *
  * - `list_replace_<Type>`
  *
+ * - `list_insert_<Type>`
+ *
+ * - `list_find_<Type>` // TODO
+ *
+ * - `list_containts_<Type>` // TODO
+ *
  * - `list_get_<Type>`
  *
  * - `list_get_ptr_<Type>`
@@ -77,12 +84,16 @@
  * - `list_shrink_to_fit_<Type>`
  *
  * - `list_to_str_<Type>_custom`
- * 
- * - `list_reverse_<Type>` 
+ *
+ * - `list_reverse_<Type>`
  *
  * - `list_sort_<Type>`
  *
+ * - `list_slice_<Type>`
+ *
  * - `list_merge_<Type>`
+ *
+ * - `list_copy_<Type>`
  *
  * - `free_list_<Type>`
  *
@@ -106,219 +117,234 @@
  * @param Type The type
  * @param BUF_SIZE The buffer size
  */
-#define CLIP_DEFINE_LIST_TYPE_IMPL(Type, BUF_SIZE, ...)                       \
-  typedef struct                                                              \
-  {                                                                           \
-    Type *data;                                                               \
-    int size;                                                                 \
-    int capacity;                                                             \
-  } List_##Type;                                                              \
-                                                                              \
-  static inline List_##Type init_list_##Type(int capacity)                    \
-  {                                                                           \
-    List_##Type list;                                                         \
-    list.data = malloc(capacity * sizeof(Type));                              \
-    if (!list.data)                                                           \
-    {                                                                         \
-      fprintf(stderr, "Memory allocation failed!\n");                         \
-      exit(EXIT_FAILURE);                                                     \
-    }                                                                         \
-    list.size = 0;                                                            \
-    list.capacity = capacity;                                                 \
-    return list;                                                              \
-  }                                                                           \
-  static inline List_##Type init_list_from_array_##Type(const Type *arr,      \
-                                                        int n)                \
-  {                                                                           \
-    List_##Type list;                                                         \
-    list.data = malloc(n * sizeof(Type));                                     \
-    if (!list.data && n > 0)                                                  \
-    {                                                                         \
-      fprintf(stderr, "Memory allocation failed!\n");                         \
-      exit(EXIT_FAILURE);                                                     \
-    }                                                                         \
-    memcpy(list.data, arr, n * sizeof(Type));                                 \
-    list.size = n;                                                            \
-    list.capacity = n;                                                        \
-    return list;                                                              \
-  }                                                                           \
-                                                                              \
-  static inline bool list_ensure_capacity_##Type(List_##Type *list,           \
-                                                 int needed)                  \
-  {                                                                           \
-    if (list->size + needed > list->capacity)                                 \
-    {                                                                         \
-      int new_capacity = list->capacity ? list->capacity * 2 : 1;             \
-      while (new_capacity < list->size + needed)                              \
-        new_capacity *= 2;                                                    \
-      Type *new_data = realloc(list->data, new_capacity * sizeof(Type));      \
-      if (!new_data)                                                          \
-        return false;                                                         \
-      list->data = new_data;                                                  \
-      list->capacity = new_capacity;                                          \
-    }                                                                         \
-    return true;                                                              \
-  }                                                                           \
-                                                                              \
-  static inline bool list_append_##Type(List_##Type *list, Type value)        \
-  {                                                                           \
-    if (!list_ensure_capacity_##Type(list, 1))                                \
-      return false;                                                           \
-    list->data[list->size++] = value;                                         \
-    return true;                                                              \
-  }                                                                           \
-                                                                              \
-  static inline bool list_pop_##Type(List_##Type *list, Type *out)            \
-  {                                                                           \
-    if (list->size == 0)                                                      \
-      return false;                                                           \
-    if (out)                                                                  \
-      *out = list->data[list->size - 1];                                      \
-    list->size--;                                                             \
-    return true;                                                              \
-  }                                                                           \
-                                                                              \
-  static inline bool list_replace_##Type(List_##Type *list, int index,        \
-                                         Type value)                          \
-  {                                                                           \
-    if (index < 0 || index >= list->size)                                     \
-      return false;                                                           \
-    list->data[index] = value;                                                \
-    return true;                                                              \
-  }                                                                           \
-                                                                              \
-  static inline Type list_get_##Type(List_##Type *list, int index)            \
-  {                                                                           \
-    if (index < 0 || index >= list->size)                                     \
-    {                                                                         \
-      fprintf(stderr, "List index out of bounds\n");                          \
-      return (Type){0};                                                       \
-    }                                                                         \
-    return list->data[index];                                                 \
-  }                                                                           \
-                                                                              \
-  static inline Type *list_get_ptr_##Type(List_##Type *list, int index)       \
-  {                                                                           \
-    if (index < 0 || index >= list->size)                                     \
-    {                                                                         \
-      fprintf(stderr, "List index out of bounds\n");                          \
-      return NULL;                                                            \
-    }                                                                         \
-    return &list->data[index];                                                \
-  }                                                                           \
-                                                                              \
-  static inline Type list_at_##Type(List_##Type *list, int index)             \
-  {                                                                           \
-    return list->data[index];                                                 \
-  }                                                                           \
-                                                                              \
-  static inline Type *list_at_ptr_##Type(List_##Type *list, int index)        \
-  {                                                                           \
-    return &list->data[index];                                                \
-  }                                                                           \
-                                                                              \
-  static inline bool list_remove_at_##Type(List_##Type *list, int index)      \
-  {                                                                           \
-    if (index < 0 || index >= list->size)                                     \
-      return false;                                                           \
-    memmove(&list->data[index], &list->data[index + 1],                       \
-            (list->size - index - 1) * sizeof(Type));                         \
-    list->size--;                                                             \
-    return true;                                                              \
-  }                                                                           \
-                                                                              \
-  static inline void list_clear_##Type(List_##Type *list) { list->size = 0; } \
-                                                                              \
-  static inline bool list_reserve_##Type(List_##Type *list, int capacity)     \
-  {                                                                           \
-    if (capacity <= list->capacity)                                           \
-      return true;                                                            \
-    Type *new_data = realloc(list->data, capacity * sizeof(Type));            \
-    if (!new_data)                                                            \
-      return false;                                                           \
-    list->data = new_data;                                                    \
-    list->capacity = capacity;                                                \
-    return true;                                                              \
-  }                                                                           \
-                                                                              \
-  static inline bool list_shrink_to_fit_##Type(List_##Type *list)             \
-  {                                                                           \
-    if (list->size == list->capacity)                                         \
-      return true;                                                            \
-    Type *new_data = realloc(list->data, list->size * sizeof(Type));          \
-    if (!new_data && list->size > 0)                                          \
-      return false;                                                           \
-    list->data = new_data;                                                    \
-    list->capacity = list->size;                                              \
-    return true;                                                              \
-  }                                                                           \
-                                                                              \
-  static inline char *list_to_str_##Type##_custom(                            \
-      List_##Type *list, void (*elem_to_str)(Type, char *, size_t))           \
-  {                                                                           \
-    if (!list)                                                                \
-      return NULL;                                                            \
-    size_t bufsize = list->size * BUF_SIZE + 2;                               \
-    char *buffer = malloc(bufsize);                                           \
-    if (!buffer)                                                              \
-      return NULL;                                                            \
-    strcpy(buffer, "[");                                                      \
-    char elem[BUF_SIZE];                                                      \
-    for (int i = 0; i < list->size; i++)                                      \
-    {                                                                         \
-      elem_to_str(list->data[i], elem, sizeof(elem));                         \
-      strcat(buffer, elem);                                                   \
-      if (i < list->size - 1)                                                 \
-        strcat(buffer, ", ");                                                 \
-    }                                                                         \
-    strcat(buffer, "]");                                                      \
-    return buffer;                                                            \
-  }                                                                           \
-                                                                              \
-  static inline void list_reverse_##Type(List_##Type *list)                   \
-  {                                                                           \
-    if (list->size < 2)                                                       \
-      return;                                                                 \
-    for (int i = 0; i < list->size / 2; i++)                                  \
-    {                                                                         \
-      Type temp = list->data[i];                                              \
-      list->data[i] = list->data[list->size - 1 - i];                         \
-      list->data[list->size - 1 - i] = temp;                                  \
-    }                                                                         \
-  }                                                                           \
-                                                                              \
-  static inline bool                                                          \
-  list_sort_##Type(                                                           \
-      List_##Type *list, int (*comparator)(const Type *a, const Type *b))     \
-  {                                                                           \
-    if (!list || !list->data || !comparator)                                  \
-    {                                                                         \
-      return false;                                                           \
-    }                                                                         \
-    if (list->size < 2)                                                       \
-    {                                                                         \
-      return true;                                                            \
-    }                                                                         \
-    qsort(list->data, list->size, sizeof(Type),                               \
-          (int (*)(const void *, const void *))comparator);                   \
-    return true;                                                              \
-  }                                                                           \
-  static inline bool list_merge_##Type(List_##Type *dest,                     \
-                                       const List_##Type *src)                \
-  {                                                                           \
-    if (!list_ensure_capacity_##Type(dest, src->size))                        \
-      return false;                                                           \
-    memcpy(&dest->data[dest->size], src->data, src->size * sizeof(Type));     \
-    dest->size += src->size;                                                  \
-    return true;                                                              \
-  }                                                                           \
-                                                                              \
-  static inline void free_list_##Type(List_##Type *list)                      \
-  {                                                                           \
-    free(list->data);                                                         \
-    list->data = NULL;                                                        \
-    list->size = 0;                                                           \
-    list->capacity = 0;                                                       \
+#define CLIP_DEFINE_LIST_TYPE_IMPL(Type, BUF_SIZE, ...)                           \
+  typedef struct                                                                  \
+  {                                                                               \
+    Type *data;                                                                   \
+    int size;                                                                     \
+    int capacity;                                                                 \
+  } List_##Type;                                                                  \
+                                                                                  \
+  static inline List_##Type init_list_##Type(int capacity)                        \
+  {                                                                               \
+    List_##Type list;                                                             \
+    list.data = malloc(capacity * sizeof(Type));                                  \
+    if (!list.data)                                                               \
+    {                                                                             \
+      fprintf(stderr, "Memory allocation failed!\n");                             \
+      exit(EXIT_FAILURE);                                                         \
+    }                                                                             \
+    list.size = 0;                                                                \
+    list.capacity = capacity;                                                     \
+    return list;                                                                  \
+  }                                                                               \
+                                                                                  \
+  static inline List_##Type init_list_from_array_##Type(const Type *arr,          \
+                                                        int n)                    \
+  {                                                                               \
+    List_##Type list;                                                             \
+    list.data = malloc(n * sizeof(Type));                                         \
+    if (!list.data && n > 0)                                                      \
+    {                                                                             \
+      fprintf(stderr, "Memory allocation failed!\n");                             \
+      exit(EXIT_FAILURE);                                                         \
+    }                                                                             \
+    memcpy(list.data, arr, n * sizeof(Type));                                     \
+    list.size = n;                                                                \
+    list.capacity = n;                                                            \
+    return list;                                                                  \
+  }                                                                               \
+                                                                                  \
+  static inline bool list_ensure_capacity_##Type(List_##Type *list,               \
+                                                 int needed)                      \
+  {                                                                               \
+    if (list->size + needed > list->capacity)                                     \
+    {                                                                             \
+      int new_capacity = list->capacity ? list->capacity * 2 : 1;                 \
+      while (new_capacity < list->size + needed)                                  \
+        new_capacity *= 2;                                                        \
+      Type *new_data = realloc(list->data, new_capacity * sizeof(Type));          \
+      if (!new_data)                                                              \
+        return false;                                                             \
+      list->data = new_data;                                                      \
+      list->capacity = new_capacity;                                              \
+    }                                                                             \
+    return true;                                                                  \
+  }                                                                               \
+                                                                                  \
+  static inline bool list_append_##Type(List_##Type *list, Type value)            \
+  {                                                                               \
+    if (!list_ensure_capacity_##Type(list, 1))                                    \
+      return false;                                                               \
+    list->data[list->size++] = value;                                             \
+    return true;                                                                  \
+  }                                                                               \
+                                                                                  \
+  static inline bool list_pop_##Type(List_##Type *list, Type *out)                \
+  {                                                                               \
+    if (list->size == 0)                                                          \
+      return false;                                                               \
+    if (out)                                                                      \
+      *out = list->data[list->size - 1];                                          \
+    list->size--;                                                                 \
+    return true;                                                                  \
+  }                                                                               \
+                                                                                  \
+  static inline bool list_replace_##Type(List_##Type *list, int index,            \
+                                         Type value)                              \
+  {                                                                               \
+    if (index < 0 || index >= list->size)                                         \
+      return false;                                                               \
+    list->data[index] = value;                                                    \
+    return true;                                                                  \
+  }                                                                               \
+                                                                                  \
+  static inline bool list_insert_##Type(List_##Type *list, int index, Type value) \
+  {                                                                               \
+    if (index < 0 || index > list->size)                                          \
+      return false;                                                               \
+    if (!list_ensure_capacity_##Type(list, 1))                                    \
+      return false;                                                               \
+    memmove(&list->data[index + 1], &list->data[index],                           \
+            (list->size - index) * sizeof(Type));                                 \
+    list->data[index] = value;                                                    \
+    list->size++;                                                                 \
+    return true;                                                                  \
+  }                                                                               \
+                                                                                  \
+  static inline Type                                                              \
+  list_get_##Type(List_##Type *list, int index)                                   \
+  {                                                                               \
+    if (index < 0 || index >= list->size)                                         \
+    {                                                                             \
+      fprintf(stderr, "List index out of bounds\n");                              \
+      return (Type){0};                                                           \
+    }                                                                             \
+    return list->data[index];                                                     \
+  }                                                                               \
+                                                                                  \
+  static inline Type *list_get_ptr_##Type(List_##Type *list, int index)           \
+  {                                                                               \
+    if (index < 0 || index >= list->size)                                         \
+    {                                                                             \
+      fprintf(stderr, "List index out of bounds\n");                              \
+      return NULL;                                                                \
+    }                                                                             \
+    return &list->data[index];                                                    \
+  }                                                                               \
+                                                                                  \
+  static inline Type list_at_##Type(List_##Type *list, int index)                 \
+  {                                                                               \
+    return list->data[index];                                                     \
+  }                                                                               \
+                                                                                  \
+  static inline Type *list_at_ptr_##Type(List_##Type *list, int index)            \
+  {                                                                               \
+    return &list->data[index];                                                    \
+  }                                                                               \
+                                                                                  \
+  static inline bool list_remove_at_##Type(List_##Type *list, int index)          \
+  {                                                                               \
+    if (index < 0 || index >= list->size)                                         \
+      return false;                                                               \
+    memmove(&list->data[index], &list->data[index + 1],                           \
+            (list->size - index - 1) * sizeof(Type));                             \
+    list->size--;                                                                 \
+    return true;                                                                  \
+  }                                                                               \
+                                                                                  \
+  static inline void list_clear_##Type(List_##Type *list) { list->size = 0; }     \
+                                                                                  \
+  static inline bool list_reserve_##Type(List_##Type *list, int capacity)         \
+  {                                                                               \
+    if (capacity <= list->capacity)                                               \
+      return true;                                                                \
+    Type *new_data = realloc(list->data, capacity * sizeof(Type));                \
+    if (!new_data)                                                                \
+      return false;                                                               \
+    list->data = new_data;                                                        \
+    list->capacity = capacity;                                                    \
+    return true;                                                                  \
+  }                                                                               \
+                                                                                  \
+  static inline bool list_shrink_to_fit_##Type(List_##Type *list)                 \
+  {                                                                               \
+    if (list->size == list->capacity)                                             \
+      return true;                                                                \
+    Type *new_data = realloc(list->data, list->size * sizeof(Type));              \
+    if (!new_data && list->size > 0)                                              \
+      return false;                                                               \
+    list->data = new_data;                                                        \
+    list->capacity = list->size;                                                  \
+    return true;                                                                  \
+  }                                                                               \
+                                                                                  \
+  static inline char *list_to_str_##Type##_custom(                                \
+      List_##Type *list, void (*elem_to_str)(Type, char *, size_t))               \
+  {                                                                               \
+    if (!list)                                                                    \
+      return NULL;                                                                \
+    size_t bufsize = list->size * BUF_SIZE + 2;                                   \
+    char *buffer = malloc(bufsize);                                               \
+    if (!buffer)                                                                  \
+      return NULL;                                                                \
+    strcpy(buffer, "[");                                                          \
+    char elem[BUF_SIZE];                                                          \
+    for (int i = 0; i < list->size; i++)                                          \
+    {                                                                             \
+      elem_to_str(list->data[i], elem, sizeof(elem));                             \
+      strcat(buffer, elem);                                                       \
+      if (i < list->size - 1)                                                     \
+        strcat(buffer, ", ");                                                     \
+    }                                                                             \
+    strcat(buffer, "]");                                                          \
+    return buffer;                                                                \
+  }                                                                               \
+                                                                                  \
+  static inline void list_reverse_##Type(List_##Type *list)                       \
+  {                                                                               \
+    if (list->size < 2)                                                           \
+      return;                                                                     \
+    for (int i = 0; i < list->size / 2; i++)                                      \
+    {                                                                             \
+      Type temp = list->data[i];                                                  \
+      list->data[i] = list->data[list->size - 1 - i];                             \
+      list->data[list->size - 1 - i] = temp;                                      \
+    }                                                                             \
+  }                                                                               \
+                                                                                  \
+  static inline bool                                                              \
+  list_sort_##Type(                                                               \
+      List_##Type *list, int (*comparator)(const Type *a, const Type *b))         \
+  {                                                                               \
+    if (!list || !list->data || !comparator)                                      \
+    {                                                                             \
+      return false;                                                               \
+    }                                                                             \
+    if (list->size < 2)                                                           \
+    {                                                                             \
+      return true;                                                                \
+    }                                                                             \
+    qsort(list->data, list->size, sizeof(Type),                                   \
+          (int (*)(const void *, const void *))comparator);                       \
+    return true;                                                                  \
+  }                                                                               \
+  static inline bool list_merge_##Type(List_##Type *dest,                         \
+                                       const List_##Type *src)                    \
+  {                                                                               \
+    if (!list_ensure_capacity_##Type(dest, src->size))                            \
+      return false;                                                               \
+    memcpy(&dest->data[dest->size], src->data, src->size * sizeof(Type));         \
+    dest->size += src->size;                                                      \
+    return true;                                                                  \
+  }                                                                               \
+                                                                                  \
+  static inline void free_list_##Type(List_##Type *list)                          \
+  {                                                                               \
+    free(list->data);                                                             \
+    list->data = NULL;                                                            \
+    list->size = 0;                                                               \
+    list->capacity = 0;                                                           \
   }
 
 /**
