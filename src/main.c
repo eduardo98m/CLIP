@@ -1,11 +1,15 @@
 
 #include <CLIP/List.h>
 #include <CLIP/Set.h>
+#include <CLIP/Queue.h>
+
 #include <string.h>
 
 // Helper for converting int → string
 
 CLIP_DEFINE_LIST_TYPE(int)
+CLIP_DEFINE_QUEUE_TYPE(int)
+
 
 void int_to_str(int x, char *buf, size_t n)
 {
@@ -13,6 +17,8 @@ void int_to_str(int x, char *buf, size_t n)
 }
 
 CLIP_REGISTER_LIST_PRINT(int, int_to_str)
+CLIP_REGISTER_QUEUE_PRINT(int,  int_to_str)
+
 
 int compare_ints_ascending(const int *a, const int *b)
 {
@@ -171,6 +177,19 @@ int main()
   Set_println(int, &my_set); // Prints: {17, 99}
 
   Set_free(int, &my_set);
+  
+  printf("Queue:\n");
+  Queue(int) q = Queue_init(int, 50);
+  for (int i = 0; i< 25; ++i){
+    Queue_enqueue(int, &q, i);
+    
+    Queue_println(int, &q);
+  }
+  for (int i = 0; i< 25; ++i){
+    Queue_dequeue(int, &q, NULL);
+    Queue_println(int, &q);
+  }
+  Queue_free(int, &q);
 
   return 0;
 }
