@@ -15,15 +15,16 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # 2. Install build dependencies (Ubuntu)
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake build-essential
+      - name: Setup C/CMake Environment
+        uses: aminya/setup-cpp@v1
+        with:
+          compiler: gcc # Set the compiler to GCC (standard for C)
+          cmake: true 
+          ninja: false   # (Optional)  Ninja build tool for speed -> Le
 
       # 3. Configure CMake build
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug # cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 
       # 4. Build
       - name: Build
