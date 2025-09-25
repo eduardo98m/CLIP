@@ -26,5 +26,9 @@ add_executable(test_map "tests/test_map.c")
 target_include_directories(test_map PUBLIC ${INCLUDE_DIR})
 add_test(NAME test_map COMMAND test_set)
 
+add_executable(test_stack "tests/test_stack.c")
+target_include_directories(test_stack PUBLIC ${INCLUDE_DIR})
+add_test(NAME test_stack COMMAND test_set)
+
 
 
