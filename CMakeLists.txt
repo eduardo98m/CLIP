@@ -4,9 +4,11 @@ project(CLIP C)
 
 set(INCLUDE_DIR "include")
 
+set(PARSERS_SOURCES "src/Parsers/json.c")
+
 set(SOURCES "src/main.c")
 
-add_executable(CLIP ${SOURCES})
+add_executable(CLIP ${SOURCES} ${PARSERS_SOURCES})
 
 target_include_directories(CLIP PUBLIC ${INCLUDE_DIR})
 
@@ -34,6 +36,6 @@ add_executable(test_queue "tests/test_queue.c")
 target_include_directories(test_queue PUBLIC ${INCLUDE_DIR})
 add_test(NAME test_queue COMMAND test_queue)
 
-
-
-
+add_executable(test_json "tests/Parsers/test_json.c" ${PARSERS_SOURCES})
+target_include_directories(test_json PUBLIC ${INCLUDE_DIR})
+add_test(NAME test_json COMMAND test_json)

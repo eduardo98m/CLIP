@@ -26,6 +26,7 @@
  * - to_str_custom (takes user-supplied key and value conversion functions)
  * - to_str (requires registration via CLIP_REGISTER_MAP_PRINT)
  * - free
+ * - for_each (lets you apply a function over the map values iterator like)
  */
 #ifndef CLIP_MAP_H
 #define CLIP_MAP_H
@@ -336,7 +337,7 @@
       return map_find_node_##KeyType##_##ValueType(node->right, key);                                                                                                          \
   }                                                                                                                                                                            \
                                                                                                                                                                                \
-  static inline bool map_contains_##KeyType##_##ValueType(Map_##KeyType##_##ValueType *map, KeyType key)                                                                   \
+  static inline bool map_contains_##KeyType##_##ValueType(Map_##KeyType##_##ValueType *map, KeyType key)                                                                       \
   {                                                                                                                                                                            \
     return map_find_node_##KeyType##_##ValueType(map->root, key) != NULL;                                                                                                      \
   }                                                                                                                                                                            \
@@ -495,6 +496,26 @@
     map_to_str_node_##KeyType##_##ValueType(map->root, buffer, bufsize, key_to_str, val_to_str, &is_first);                                                                    \
     strcat(buffer, "}");                                                                                                                                                       \
     return buffer;                                                                                                                                                             \
+  }                                                                                                                                                                            \
+  /* Iterator Functions */                                                                                                                                                     \
+  static inline void map_foreach_node_##KeyType##_##ValueType(                                                                                                                 \
+      MapNode_##KeyType##_##ValueType *node,                                                                                                                                   \
+      void (*fn)(KeyType * key, ValueType * val, void *userdata),                                                                                                              \
+      void *userdata)                                                                                                                                                          \
+  {                                                                                                                                                                            \
+    if (!node)                                                                                                                                                                 \
+      return;                                                                                                                                                                  \
+    map_foreach_node_##KeyType##_##ValueType(node->left, fn, userdata);                                                                                                        \
+    fn(&node->key, &node->value, userdata);                                                                                                                                    \
+    map_foreach_node_##KeyType##_##ValueType(node->right, fn, userdata);                                                                                                       \
+  }                                                                                                                                                                            \
+                                                                                                                                                                               \
+  static inline void map_foreach_##KeyType##_##ValueType(                                                                                                                      \
+      Map_##KeyType##_##ValueType *map,                                                                                                                                        \
+      void (*fn)(KeyType * key, ValueType * val, void *userdata),                                                                                                              \
+      void *userdata)                                                                                                                                                          \
+  {                                                                                                                                                                            \
+    map_foreach_node_##KeyType##_##ValueType(map->root, fn, userdata);                                                                                                         \
   }
 
 #define CLIP_REGISTER_MAP_PRINT(KeyType, ValueType, key_fn, val_fn)                               \
@@ -515,6 +536,7 @@
 #define Map_empty(KeyType, ValueType, map) map_empty_##KeyType##_##ValueType(map)
 #define Map_clear(KeyType, ValueType, map) map_clear_##KeyType##_##ValueType(map)
 #define Map_free(KeyType, ValueType, map) free_map_##KeyType##_##ValueType(map)
+#define Map_foreach(KeyType, ValueType, map, fn, userdata) map_foreach_##KeyType##_##ValueType(map, fn, userdata)
 
 #define Map_print(KeyType, map)          \
   do                                     \
