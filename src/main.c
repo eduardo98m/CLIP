@@ -4,6 +4,7 @@
 #include <CLIP/Queue.h>
 
 #include <string.h>
+#include <CLIP/Parsers/json.h>
 
 // Helper for converting int → string
 
