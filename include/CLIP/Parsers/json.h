@@ -3,13 +3,14 @@
 #define CLIP_PARSERS_JSON_H
 #include <CLIP/Map.h>
 #include <CLIP/List.h>
+#include <stdbool.h>
+
 
 typedef const char *string;
 typedef struct JsonValue JsonValue;
 typedef JsonValue *JsonValue_ptr;
 
-typedef enum
-{
+typedef enum {
     JSON_NULL,
     JSON_BOOL,
     JSON_NUMBER,
@@ -27,17 +28,17 @@ static inline int clip_json_cmp_str(const string *a, const string *b)
 
 CLIP_DEFINE_MAP_TYPE(string, JsonValue_ptr, clip_json_cmp_str);
 
-struct JsonValue
-{
+struct JsonValue {
     JsonType type;
-    union
-    {
-        string str;                        // for JSON_STRING, JSON_NUMBER (kept as string)
-        int boolean;                       // for JSON_BOOL
-        Map(string, JsonValue_ptr) object; // for JSON_OBJECT
-        List(JsonValue_ptr) array;         // for JSON_ARRAY
+    union {
+        string str; // JSON_STRING
+        double number;
+        bool boolean;
+        Map(string, JsonValue_ptr) object;
+        List(JsonValue_ptr) array;
     };
 };
+
 
 JsonValue_ptr Json_parse(const string input);
 void Json_free(JsonValue_ptr v);
