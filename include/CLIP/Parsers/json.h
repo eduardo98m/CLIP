@@ -16,10 +16,27 @@ typedef enum {
     JSON_NUMBER,
     JSON_STRING,
     JSON_OBJECT,
-    JSON_ARRAY
+    JSON_LIST
 } JsonType;
 
-CLIP_DEFINE_LIST_TYPE(JsonValue_ptr);
+
+void Json_free(JsonValue_ptr v);
+
+static void Json_free_wrapper(JsonValue_ptr *v_ptr) {
+    if (v_ptr && *v_ptr) {
+        Json_free(*v_ptr);
+    }
+}
+JsonValue_ptr Json_parse(const string input);
+static JsonValue_ptr parse_value(string *s);
+static JsonValue_ptr parse_object(string *s);
+static JsonValue_ptr parse_list(string *s);
+static JsonValue_ptr parse_string(string *s);
+static JsonValue_ptr parse_number(string *s);
+static JsonValue_ptr parse_literal(string *s, string literal, JsonType type, int bool_val);
+
+
+CLIP_DEFINE_LIST_TYPE_WITH_FREE(JsonValue_ptr, Json_free_wrapper);
 
 static inline int clip_json_cmp_str(const string *a, const string *b)
 {
@@ -35,18 +52,9 @@ struct JsonValue {
         double number;
         bool boolean;
         Map(string, JsonValue_ptr) object;
-        List(JsonValue_ptr) array;
+        List(JsonValue_ptr) list;
     };
 };
 
-
-JsonValue_ptr Json_parse(const string input);
-void Json_free(JsonValue_ptr v);
-static JsonValue_ptr parse_value(string *s);
-static JsonValue_ptr parse_object(string *s);
-static JsonValue_ptr parse_array(string *s);
-static JsonValue_ptr parse_string(string *s);
-static JsonValue_ptr parse_number(string *s);
-static JsonValue_ptr parse_literal(string *s, string literal, JsonType type, int bool_val);
 
 #endif // CLIP_PARSERS_JSON_H

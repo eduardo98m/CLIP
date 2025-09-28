@@ -108,7 +108,26 @@
  * CLIP_DEFINE_LIST_TYPE(Student, 512)   // custom BUF_SIZE = 512
  */
 #define CLIP_DEFINE_LIST_TYPE(...) \
-  CLIP_DEFINE_LIST_TYPE_IMPL(__VA_ARGS__, 256)
+  CLIP_DEFINE_LIST_TYPE_IMPL(__VA_ARGS__, NULL, 256)
+
+/** 
+ * @brief Defines the List type with a given buffer size
+*/
+#define CLIP_DEFINE_LIST_TYPE_BUF(Type, BUF) \
+  CLIP_DEFINE_LIST_TYPE_IMPL(Type, NULL, BUF)
+
+/** 
+ * @brief Defines the List type with a given free function
+*/
+#define CLIP_DEFINE_LIST_TYPE_WITH_FREE(Type, FREE_FN) \
+  CLIP_DEFINE_LIST_TYPE_IMPL(Type, FREE_FN, 256)
+
+
+/** 
+ * @brief Defines the List type with a given free function and a custom buffer size for the print
+*/
+#define CLIP_DEFINE_LIST_TYPE_FULL(Type, FREE_FN, BUF) \
+  CLIP_DEFINE_LIST_TYPE_IMPL(Type, FREE_FN, BUF)
 
 /**
  * @brief Specialized implementation of `CLIP_DEFINE_LIST_TYPE` but allows the
@@ -117,7 +136,7 @@
  * @param Type The type
  * @param BUF_SIZE The buffer size
  */
-#define CLIP_DEFINE_LIST_TYPE_IMPL(Type, BUF_SIZE, ...)                           \
+#define CLIP_DEFINE_LIST_TYPE_IMPL(Type, Dtor, BUF_SIZE)                          \
   typedef struct                                                                  \
   {                                                                               \
     Type *data;                                                                   \
@@ -341,6 +360,15 @@
                                                                                   \
   static inline void free_list_##Type(List_##Type *list)                          \
   {                                                                               \
+    void (*dtor_fn)(Type *) = Dtor;                                               \
+    if (dtor_fn)                                                                  \
+    {                                                                             \
+      for (int i = 0; i < list->size; i++)                                        \
+      {                                                                           \
+                                                                                  \
+        (dtor_fn)(&list->data[i]);                                                \
+      }                                                                           \
+    }                                                                             \
     free(list->data);                                                             \
     list->data = NULL;                                                            \
     list->size = 0;                                                               \
@@ -469,7 +497,6 @@
  * @brief Insert an element at index `i` with a new value.
  */
 #define List_insert(Type, list, i, val) list_insert_##Type(list, i, val)
-
 
 /**
  * @def List_get(Type, list, index)
@@ -665,6 +692,8 @@
  * @brief Free all memory held by the list and reset its fields.
  */
 #define List_free(Type, list) free_list_##Type(list)
+
+#define List_free_fn(Type) free_list_##Type
 
 /**
  * @def List_print(Type, list)

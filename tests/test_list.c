@@ -3,6 +3,9 @@
 
 CLIP_DEFINE_LIST_TYPE(int)
 
+CLIP_DEFINE_LIST_TYPE_WITH_FREE(List(int), List_free_fn(int))
+
+
 // --- Test Cases ---
 TEST(init)
 {
@@ -186,6 +189,46 @@ TEST(foreach_macro)
     List_free(int, &xs);
 }
 
+
+TEST(nested_lists){
+    // 1. FIX: Use correct array initialization syntax
+    int row_a_arr[] = {1, 2, 3};
+    int row_b_arr[] = {4, 5, 6};
+    int row_c_arr[] = {7, 8, 9};
+
+    // 2. Initialize inner lists (List(int))
+    List(int) a = List_init_from_array(int, row_a_arr, 3);
+    List(int) b = List_init_from_array(int, row_b_arr, 3);
+    List(int) c = List_init_from_array(int, row_c_arr, 3);
+
+    // 3. Initialize the outer list (List(List_int) or List(List(int)))
+    // Assuming List_int is the typedef for List(int)
+
+    List(List_int) mat = List_init(List_int, 3);
+
+    // 4. FIX: APPEND the inner lists to the matrix list
+    ASSERT_TRUE(List_append(List_int, &mat, a));
+    ASSERT_TRUE(List_append(List_int, &mat, b));
+    ASSERT_TRUE(List_append(List_int, &mat, c));
+
+
+    ASSERT_TRUE(mat.size == 3);
+    List(int) *row0_ptr = List_get_ptr(List_int, &mat, 0); 
+    ASSERT_NOT_NULL(row0_ptr);
+    ASSERT_TRUE(row0_ptr->size == 3);
+    ASSERT_TRUE(List_get(int, row0_ptr, 1) == 2); 
+    // Get the third inner list (row 2)
+    List(int) *row2_ptr = List_get_ptr(List_int, &mat, 2); // Access index 2 (for list c)
+    ASSERT_NOT_NULL(row2_ptr);
+    // Get an element from the inner list (mat[2][2] should be 9)
+    ASSERT_TRUE(List_get(int, row2_ptr, 2) == 9); 
+    // Free the wrapper list, which should free the COPIES of the inner lists' data.
+    List_free(List_int, &mat); 
+}
+
+
+
+
 TEST_SUITE(
     RUN_TEST(init),
     RUN_TEST(init_from_array_and_static_array),
@@ -197,4 +240,5 @@ TEST_SUITE(
     RUN_TEST(reverse_and_sort),
     RUN_TEST(pop),
     RUN_TEST(merge),
-    RUN_TEST(foreach_macro))
+    RUN_TEST(foreach_macro),
+    RUN_TEST(nested_lists))

@@ -35,7 +35,7 @@ static JsonValue *parse_value(string *s)
     if (**s == '{')
         return parse_object(s);
     if (**s == '[')
-        return parse_array(s);
+        return parse_list(s);
     if (**s == '"')
         return parse_string(s);
     if (strncmp(*s, "true", 4) == 0)
@@ -94,11 +94,11 @@ static JsonValue *parse_object(string *s)
 }
 
 // --- Array ---
-static JsonValue *parse_array(string *s)
+static JsonValue *parse_list(string *s)
 {
     (*s)++; // skip '['
-    JsonValue *arr = new_value(JSON_ARRAY);
-    arr->array = List_init(JsonValue_ptr, 4);
+    JsonValue *arr = new_value(JSON_LIST);
+    arr->list = List_init(JsonValue_ptr, 4);
 
     skip_ws(s);
     if (**s == ']')
@@ -110,7 +110,7 @@ static JsonValue *parse_array(string *s)
     while (**s)
     {
         JsonValue *val = parse_value(s);
-        List_append(JsonValue_ptr, &arr->array, val);
+        List_append(JsonValue_ptr, &arr->list, val);
         skip_ws(s);
         if (**s == ']')
         {
@@ -209,11 +209,8 @@ void Json_free(JsonValue* v) {
             Map_foreach(string, JsonValue_ptr, &v->object, free_object_entry, NULL);
             Map_free(string, JsonValue_ptr, &v->object);
             break;
-        case JSON_ARRAY:
-            for (size_t i = 0; i < v->array.size; i++) {
-                Json_free(List_get(JsonValue_ptr, &v->array, i));
-            }
-            List_free(JsonValue_ptr, &v->array);
+        case JSON_LIST:
+            List_free(JsonValue_ptr, &v->list);
             break;
         default:
             break;
