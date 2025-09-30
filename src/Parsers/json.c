@@ -206,7 +206,7 @@ void Json_free(JsonValue* v) {
             free((char*)v->str);
             break;
         case JSON_OBJECT:
-            Map_foreach(string, JsonValue_ptr, &v->object, free_object_entry, NULL);
+            //Map_foreach(string, JsonValue_ptr, &v->object, free_object_entry, NULL);
             Map_free(string, JsonValue_ptr, &v->object);
             break;
         case JSON_LIST:

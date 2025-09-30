@@ -27,6 +27,12 @@ static void Json_free_wrapper(JsonValue_ptr *v_ptr) {
         Json_free(*v_ptr);
     }
 }
+
+static void free_string(string *k)
+{
+    free((char *)*k);
+}
+
 JsonValue_ptr Json_parse(const string input);
 static JsonValue_ptr parse_value(string *s);
 static JsonValue_ptr parse_object(string *s);
@@ -43,7 +49,8 @@ static inline int clip_json_cmp_str(const string *a, const string *b)
     return strcmp(*a, *b);
 };
 
-CLIP_DEFINE_MAP_TYPE(string, JsonValue_ptr, clip_json_cmp_str);
+//CLIP_DEFINE_MAP_TYPE();
+CLIP_DEFINE_MAP_TYPE_WITH_FREE(string, JsonValue_ptr, clip_json_cmp_str, free_string, Json_free_wrapper)
 
 struct JsonValue {
     JsonType type;

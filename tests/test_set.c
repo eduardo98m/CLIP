@@ -16,6 +16,34 @@ void int_to_str(int value, char *buffer, size_t size)
 CLIP_DEFINE_SET_TYPE(int, compare_ints)
 CLIP_REGISTER_SET_PRINT(int, int_to_str)
 
+// Global counter to track how many times the destructor is called
+static int destructor_call_count = 0;
+typedef struct
+{
+    int *value;
+} AllocatedInt;
+int compare_allocated_int(const AllocatedInt *a, const AllocatedInt *b)
+{
+    return (*a->value > *b->value) - (*a->value < *b->value);
+}
+void free_allocated_int(AllocatedInt *v_ptr)
+{
+    if (v_ptr && v_ptr->value)
+    {
+        free(v_ptr->value);
+        v_ptr->value = NULL;
+        destructor_call_count++;
+    }
+}
+
+AllocatedInt new_allocated_int(int val)
+{
+    int *p = malloc(sizeof(int));
+    *p = val;
+    return (AllocatedInt){.value = p};
+}
+CLIP_DEFINE_SET_TYPE_WITH_FREE(AllocatedInt, compare_allocated_int, free_allocated_int)
+
 // --- Test Cases ---
 TEST(init)
 {
@@ -579,6 +607,61 @@ TEST(join_null_source)
     Set_free(int, &dest);
 }
 
+/**
+ * Test a compelx case of destruction of memory allocated structs
+ */
+TEST(join_with_destructor)
+{
+    Set(AllocatedInt) dest = Set_init(AllocatedInt);
+    Set(AllocatedInt) src = Set_init(AllocatedInt);
+
+    // 1. Insert unique elements into dest (10, 20)
+    Set_insert(AllocatedInt, &dest, new_allocated_int(10));
+    Set_insert(AllocatedInt, &dest, new_allocated_int(20));
+
+    // 2. Insert overlapping and unique elements into src (20, 30)
+    Set_insert(AllocatedInt, &src, new_allocated_int(20)); // Duplicate value
+    Set_insert(AllocatedInt, &src, new_allocated_int(30)); // New value
+
+    // 3. Reset counter (destructor should not have been called yet)
+    destructor_call_count = 0;
+
+    // Total unique elements inserted: 3 (10, 20, 30)
+
+    // 4. Join the sets
+    int added = Set_join(AllocatedInt, &dest, &src);
+
+    // Check successful merge
+    ASSERT_TRUE(added == 1); // Only '30' was new
+    ASSERT_TRUE(Set_size(AllocatedInt, &dest) == 3);
+    ASSERT_TRUE(Set_size(AllocatedInt, &src) == 0);
+
+    // Crucial Check: Destructor MUST NOT have been called on transferred elements
+    // The duplicate '20' from src should have been destroyed (destructor called once)
+    // The new '30' was transferred and should NOT be destroyed yet.
+    // The old '20' from src (which was copied but not inserted) should have been destroyed.
+    // If the implementation correctly detects duplication *before* the join,
+    // the source's '20' is cleaned up *by the clear* or *by the insert failure*.
+    // If the '30' value was zeroed out during transfer, the count should be 1 (for the duplicate '20' that was in src).
+    
+    // Simplest assumption for *correct* transfer logic: 
+    // The duplicate '20' node in SRC is freed and its destructor called (1 call).
+    // The transferred '30' node in SRC is freed, but its value is NULLed, so its destructor is NOT called.
+    ASSERT_TRUE(destructor_call_count >= 1); 
+
+    // 5. Free the destination set (This should trigger the destructor for all 3 unique elements)
+    Set_free(AllocatedInt, &dest);
+    
+    // Free the source set (should be empty, no further destructor calls)
+    Set_free(AllocatedInt, &src); 
+
+    // Final Check: Destructor should have been called 3 times in total 
+    // (for 10, 20, and 30 which were in the final 'dest' set)
+    // PLUS 1 time for the duplicate '20' in 'src' that was rejected.
+    // Total free count must be 4.
+    ASSERT_TRUE(destructor_call_count == 4); 
+}
+
 TEST_SUITE(
     RUN_TEST(init),
     RUN_TEST(insert_and_contains),
@@ -603,4 +686,5 @@ TEST_SUITE(
     RUN_TEST(join_overlapping_sets),
     RUN_TEST(join_large_sets),
     RUN_TEST(join_and_then_insert),
-    RUN_TEST(join_null_source))
+    RUN_TEST(join_null_source),
+    RUN_TEST(join_with_destructor))

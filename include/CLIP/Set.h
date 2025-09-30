@@ -51,7 +51,25 @@
  * @param BUF_SIZE Optional: Buffer size allocated per element for string conversion. Default is 256.
  */
 #define CLIP_DEFINE_SET_TYPE(...) \
-  CLIP_DEFINE_SET_TYPE_IMPL(__VA_ARGS__, 256)
+  CLIP_DEFINE_SET_TYPE_IMPL(__VA_ARGS__, NULL, 256)
+
+/**
+ * @brief Defines the Set type with a given buffer size
+ */
+#define CLIP_DEFINE_SET_TYPE_BUF(Type, CompareFunc, BUF_SIZE) \
+  CLIP_DEFINE_SET_TYPE_IMPL(Type, CompareFunc, NULL, BUF)
+
+/**
+ * @brief Defines the Set type with a given free function for the type
+ */
+#define CLIP_DEFINE_SET_TYPE_WITH_FREE(Type, CompareFunc, FREE_FN) \
+  CLIP_DEFINE_SET_TYPE_IMPL(Type, CompareFunc, FREE_FN, 256)
+
+/**
+ * @brief Defines the Set type with a given free function and a custom buffer size for the print
+ */
+#define CLIP_DEFINE_SET_TYPE_FULL(Type, CompareFunc, FREE_FN, BUF_SIZE) \
+  CLIP_DEFINE_SET_TYPE_IMPL(Type, CompareFunc, FREE_FN, BUF_SIZE)
 
 /**
  * @brief Specialized implementation of `CLIP_DEFINE_SET_TYPE` but allows the
@@ -59,9 +77,10 @@
  *
  * @param Type The type
  * @param CompareFunc The comparator function
+ * @param DestructorFunc Destructor/Free function for the type
  * @param BUF_SIZE The buffer size
  */
-#define CLIP_DEFINE_SET_TYPE_IMPL(Type, CompareFunc, BUF_SIZE, ...)                                    \
+#define CLIP_DEFINE_SET_TYPE_IMPL(Type, CompareFunc, DestructorFunc, BUF_SIZE, ...)                    \
                                                                                                        \
   typedef enum                                                                                         \
   {                                                                                                    \
@@ -422,6 +441,11 @@
       return;                                                                                          \
     set_clear_node_##Type(node->left);                                                                 \
     set_clear_node_##Type(node->right);                                                                \
+    void (*Dtor_fn)(Type *) = DestructorFunc;                                                          \
+    if (Dtor_fn)                                                                                       \
+    {                                                                                                  \
+      (Dtor_fn)(&node->value);                                                                         \
+    }                                                                                                  \
     free(node);                                                                                        \
   }                                                                                                    \
                                                                                                        \
@@ -440,7 +464,10 @@
       return;                                                                                          \
     set_join_recursive_##Type(dest, node->left);                                                       \
     set_join_recursive_##Type(dest, node->right);                                                      \
-    set_insert_##Type(dest, node->value);                                                              \
+    if (set_insert_##Type(dest, node->value))                                                          \
+    {                                                                                                  \
+      node->value = (Type){0}; /* We nullify the values form the source node (transfer ownership) */   \
+    }                                                                                                  \
   }                                                                                                    \
                                                                                                        \
   /**                                                                                                  \

@@ -110,22 +110,21 @@
 #define CLIP_DEFINE_LIST_TYPE(...) \
   CLIP_DEFINE_LIST_TYPE_IMPL(__VA_ARGS__, NULL, 256)
 
-/** 
+/**
  * @brief Defines the List type with a given buffer size
-*/
+ */
 #define CLIP_DEFINE_LIST_TYPE_BUF(Type, BUF) \
   CLIP_DEFINE_LIST_TYPE_IMPL(Type, NULL, BUF)
 
-/** 
+/**
  * @brief Defines the List type with a given free function
-*/
+ */
 #define CLIP_DEFINE_LIST_TYPE_WITH_FREE(Type, FREE_FN) \
   CLIP_DEFINE_LIST_TYPE_IMPL(Type, FREE_FN, 256)
 
-
-/** 
+/**
  * @brief Defines the List type with a given free function and a custom buffer size for the print
-*/
+ */
 #define CLIP_DEFINE_LIST_TYPE_FULL(Type, FREE_FN, BUF) \
   CLIP_DEFINE_LIST_TYPE_IMPL(Type, FREE_FN, BUF)
 
@@ -136,7 +135,7 @@
  * @param Type The type
  * @param BUF_SIZE The buffer size
  */
-#define CLIP_DEFINE_LIST_TYPE_IMPL(Type, Dtor, BUF_SIZE)                          \
+#define CLIP_DEFINE_LIST_TYPE_IMPL(Type, DestructorFunc, BUF_SIZE)                \
   typedef struct                                                                  \
   {                                                                               \
     Type *data;                                                                   \
@@ -360,13 +359,13 @@
                                                                                   \
   static inline void free_list_##Type(List_##Type *list)                          \
   {                                                                               \
-    void (*dtor_fn)(Type *) = Dtor;                                               \
-    if (dtor_fn)                                                                  \
+    void (*Dtor_fn)(Type *) = DestructorFunc;                                     \
+    if (Dtor_fn)                                                                  \
     {                                                                             \
       for (int i = 0; i < list->size; i++)                                        \
       {                                                                           \
                                                                                   \
-        (dtor_fn)(&list->data[i]);                                                \
+        (Dtor_fn)(&list->data[i]);                                                \
       }                                                                           \
     }                                                                             \
     free(list->data);                                                             \

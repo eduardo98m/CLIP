@@ -54,7 +54,13 @@
  * @param BUF_SIZE Optional: Buffer size allocated per element for string conversion. Default is 256.
  */
 #define CLIP_DEFINE_MAP_TYPE(...) \
-  CLIP_DEFINE_MAP_TYPE_IMPL(__VA_ARGS__, 256)
+  CLIP_DEFINE_MAP_TYPE_IMPL(__VA_ARGS__, NULL, NULL, 256)
+
+#define CLIP_DEFINE_MAP_TYPE_WITH_FREE(KeyType, ValueType, CompareFunc, KeyFree, ValueFree) \
+  CLIP_DEFINE_MAP_TYPE_IMPL(KeyType, ValueType, CompareFunc, KeyFree, ValueFree, 256)
+
+#define CLIP_DEFINE_MAP_TYPE_FULL(KeyType, ValueType, CompareFunc, KeyFree, ValueFree, BUF_SIZE) \
+  CLIP_DEFINE_MAP_TYPE_IMPL(KeyType, ValueType, CompareFunc, KeyFree, ValueFree, BUF_SIZE)
 
 /**
  * @brief Specialized implementation of `CLIP_DEFINE_MAP_TYPE` but allows the
@@ -65,7 +71,7 @@
  * @param CompareFunc The comparator function for keys
  * @param BUF_SIZE The buffer size
  */
-#define CLIP_DEFINE_MAP_TYPE_IMPL(KeyType, ValueType, CompareFunc, BUF_SIZE, ...)                                                                                              \
+#define CLIP_DEFINE_MAP_TYPE_IMPL(KeyType, ValueType, CompareFunc, KeyFree, ValueFree, BUF_SIZE, ...)                                                                          \
                                                                                                                                                                                \
   typedef enum                                                                                                                                                                 \
   {                                                                                                                                                                            \
@@ -439,6 +445,13 @@
       return;                                                                                                                                                                  \
     map_clear_node_##KeyType##_##ValueType(node->left);                                                                                                                        \
     map_clear_node_##KeyType##_##ValueType(node->right);                                                                                                                       \
+    void (*KeyDtor)(KeyType *) = KeyFree;                                                                                                                                      \
+    void (*ValDtor)(ValueType *) = ValueFree;                                                                                                                                  \
+                                                                                                                                                                               \
+    if (KeyDtor)                                                                                                                                                               \
+      KeyDtor(&node->key);                                                                                                                                                     \
+    if (ValDtor)                                                                                                                                                               \
+      ValDtor(&node->value);                                                                                                                                                   \
     free(node);                                                                                                                                                                \
   }                                                                                                                                                                            \
                                                                                                                                                                                \
