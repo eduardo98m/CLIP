@@ -77,10 +77,10 @@
  *
  * @param Type The type
  * @param CompareFunc The comparator function
- * @param DestructorFunc Destructor/Free function for the type
+ * @param FREE_FN Destructor/Free function for the type : Useful for automatic liberating memory
  * @param BUF_SIZE The buffer size
  */
-#define CLIP_DEFINE_SET_TYPE_IMPL(Type, CompareFunc, DestructorFunc, BUF_SIZE, ...)                    \
+#define CLIP_DEFINE_SET_TYPE_IMPL(Type, CompareFunc, FREE_FN, BUF_SIZE, ...)                           \
                                                                                                        \
   typedef enum                                                                                         \
   {                                                                                                    \
@@ -441,7 +441,7 @@
       return;                                                                                          \
     set_clear_node_##Type(node->left);                                                                 \
     set_clear_node_##Type(node->right);                                                                \
-    void (*Dtor_fn)(Type *) = DestructorFunc;                                                          \
+    void (*Dtor_fn)(Type *) = FREE_FN;                                                                 \
     if (Dtor_fn)                                                                                       \
     {                                                                                                  \
       (Dtor_fn)(&node->value);                                                                         \

@@ -135,7 +135,7 @@
  * @param Type The type
  * @param BUF_SIZE The buffer size
  */
-#define CLIP_DEFINE_LIST_TYPE_IMPL(Type, DestructorFunc, BUF_SIZE)                \
+#define CLIP_DEFINE_LIST_TYPE_IMPL(Type, FREE_FN, BUF_SIZE)                       \
   typedef struct                                                                  \
   {                                                                               \
     Type *data;                                                                   \
@@ -359,7 +359,7 @@
                                                                                   \
   static inline void free_list_##Type(List_##Type *list)                          \
   {                                                                               \
-    void (*Dtor_fn)(Type *) = DestructorFunc;                                     \
+    void (*Dtor_fn)(Type *) = FREE_FN;                                            \
     if (Dtor_fn)                                                                  \
     {                                                                             \
       for (int i = 0; i < list->size; i++)                                        \

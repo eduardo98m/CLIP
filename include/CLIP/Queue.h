@@ -27,7 +27,25 @@
 #include <string.h>
 
 #define CLIP_DEFINE_QUEUE_TYPE(...) \
-  CLIP_DEFINE_QUEUE_TYPE_IMPL(__VA_ARGS__, 256)
+  CLIP_DEFINE_QUEUE_TYPE_IMPL(__VA_ARGS__, NULL, 256)
+
+/**
+ * @brief Defines the QUEUE type with a given buffer size
+ */
+#define CLIP_DEFINE_QUEUE_TYPE_BUF(Type, BUF) \
+  CLIP_DEFINE_QUEUE_TYPE_IMPL(Type, NULL, BUF)
+
+/**
+ * @brief Defines the QUEUE type with a given free function
+ */
+#define CLIP_DEFINE_QUEUE_TYPE_WITH_FREE(Type, FREE_FN) \
+  CLIP_DEFINE_QUEUE_TYPE_IMPL(Type, FREE_FN, 256)
+
+/**
+ * @brief Defines the QUEUE type with a given free function and a custom buffer size for the print
+ */
+#define CLIP_DEFINE_QUEUE_TYPE_FULL(Type, FREE_FN, BUF) \
+  CLIP_DEFINE_QUEUE_TYPE_IMPL(Type, FREE_FN, BUF)
 
 /**
  * @brief Define a type-safe queue for the given element type.
@@ -48,9 +66,10 @@
  * - `queue_to_str_<Type>_custom`
  *
  * @param Type The element type (e.g., `int`, `float`, `struct Foo`).
+ * @param FREE_FN Function to free
  * @param BUF_SIZE Optional: Buffer size allocated per element for string conversion. Default is 256.
  */
-#define CLIP_DEFINE_QUEUE_TYPE_IMPL(Type, BUF_SIZE, ...)                       \
+#define CLIP_DEFINE_QUEUE_TYPE_IMPL(Type, FREE_FN, BUF_SIZE, ...)              \
   typedef struct                                                               \
   {                                                                            \
     Type *data;                                                                \
@@ -79,6 +98,15 @@
                                                                                \
   static inline void free_queue_##Type(Queue_##Type *q)                        \
   {                                                                            \
+    void (*free_fn)(Type *) = FREE_FN;                                         \
+    if (free_fn)                                                               \
+    {                                                                          \
+      for (int i = 0; i < q->count; i++)                                       \
+      {                                                                        \
+                                                                               \
+        (free_fn)(&q->data[i]);                                                \
+      }                                                                        \
+    }                                                                          \
     free(q->data);                                                             \
     q->data = NULL;                                                            \
     q->capacity = 0;                                                           \

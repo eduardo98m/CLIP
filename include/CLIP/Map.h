@@ -51,16 +51,18 @@
  * @param KeyType The key type (e.g., `int`, `char*`, `struct Foo`).
  * @param ValueType The value type (e.g., `int`, `char*`, `struct Bar`).
  * @param CompareFunc The comparator function for the key type.
+ * @param KEY_FREE_FN Free function for the key type
+ * @param VALUE_FREE_FN Free function for the value type
  * @param BUF_SIZE Optional: Buffer size allocated per element for string conversion. Default is 256.
  */
 #define CLIP_DEFINE_MAP_TYPE(...) \
   CLIP_DEFINE_MAP_TYPE_IMPL(__VA_ARGS__, NULL, NULL, 256)
 
-#define CLIP_DEFINE_MAP_TYPE_WITH_FREE(KeyType, ValueType, CompareFunc, KeyFree, ValueFree) \
-  CLIP_DEFINE_MAP_TYPE_IMPL(KeyType, ValueType, CompareFunc, KeyFree, ValueFree, 256)
+#define CLIP_DEFINE_MAP_TYPE_WITH_FREE(KeyType, ValueType, CompareFunc, KEY_FREE_FN, VALUE_FREE_FN) \
+  CLIP_DEFINE_MAP_TYPE_IMPL(KeyType, ValueType, CompareFunc, KEY_FREE_FN, VALUE_FREE_FN, 256)
 
-#define CLIP_DEFINE_MAP_TYPE_FULL(KeyType, ValueType, CompareFunc, KeyFree, ValueFree, BUF_SIZE) \
-  CLIP_DEFINE_MAP_TYPE_IMPL(KeyType, ValueType, CompareFunc, KeyFree, ValueFree, BUF_SIZE)
+#define CLIP_DEFINE_MAP_TYPE_FULL(KeyType, ValueType, CompareFunc, KEY_FREE_FN, VALUE_FREE_FN, BUF_SIZE) \
+  CLIP_DEFINE_MAP_TYPE_IMPL(KeyType, ValueType, CompareFunc, KEY_FREE_FN, VALUE_FREE_FN, BUF_SIZE)
 
 /**
  * @brief Specialized implementation of `CLIP_DEFINE_MAP_TYPE` but allows the
@@ -71,7 +73,7 @@
  * @param CompareFunc The comparator function for keys
  * @param BUF_SIZE The buffer size
  */
-#define CLIP_DEFINE_MAP_TYPE_IMPL(KeyType, ValueType, CompareFunc, KeyFree, ValueFree, BUF_SIZE, ...)                                                                          \
+#define CLIP_DEFINE_MAP_TYPE_IMPL(KeyType, ValueType, CompareFunc, KEY_FREE_FN, VALUE_FREE_FN, BUF_SIZE, ...)                                                                          \
                                                                                                                                                                                \
   typedef enum                                                                                                                                                                 \
   {                                                                                                                                                                            \
@@ -445,8 +447,8 @@
       return;                                                                                                                                                                  \
     map_clear_node_##KeyType##_##ValueType(node->left);                                                                                                                        \
     map_clear_node_##KeyType##_##ValueType(node->right);                                                                                                                       \
-    void (*KeyDtor)(KeyType *) = KeyFree;                                                                                                                                      \
-    void (*ValDtor)(ValueType *) = ValueFree;                                                                                                                                  \
+    void (*KeyDtor)(KeyType *) = KEY_FREE_FN;                                                                                                                                      \
+    void (*ValDtor)(ValueType *) = VALUE_FREE_FN;                                                                                                                                  \
                                                                                                                                                                                \
     if (KeyDtor)                                                                                                                                                               \
       KeyDtor(&node->key);                                                                                                                                                     \
